@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>餃子投げ検定試験 | Gyoza Throwing Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=swap');
+        
+        body {
+            font-family: 'Yuji Syuku', serif;
+            touch-action: none; /* Prevent zooming/scrolling on mobile */
+            background-color: #8B0000; /* Deep Red */
+            overflow: hidden;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: repeating-linear-gradient(
+                45deg,
+                #fdfbf7,
+                #fdfbf7 20px,
+                #f5f5f5 20px,
+                #f5f5f5 40px
+            );
+            overflow: hidden;
+        }
+
+        /* UI Layers */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        .retro-box {
+            background: #D32F2F;
+            border: 4px solid #FBC02D;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            max-width: 90%;
+        }
+
+        .btn {
+            background: #FBC02D;
+            color: #8B0000;
+            border: none;
+            padding: 10px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            margin-top: 10px;
+            box-shadow: 0 4px 0 #C49000;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #C49000;
+        }
+
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 1.5rem;
+            color: #D32F2F;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 2px 2px 0px #fff;
+            z-index: 5;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .floating { animation: float 3s ease-in-out infinite; }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <!-- Canvas Layer -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hud hidden">
+        <div>残り時間: <span id="timer">60</span>秒</div>
+        <div>得点: <span id="score">0</span>皿</div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="ui-layer interactive">
+        <div class="retro-box floating">
+            <h1 class="text-4xl mb-2">🥟 餃子投げ検定 🥟</h1>
+            <p class="text-lg mb-4">〜目指せ、餃子名人〜</p>
+            <p class="text-sm mb-6">動く店員さんに餃子を投げつけろ！<br>クリック/タップで発射</p>
+            <button class="btn" onclick="startGame()">試験開始</button>
+        </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="resultScreen" class="ui-layer interactive hidden">
+        <div class="retro-box">
+            <h2 class="text-3xl mb-2">試験終了！</h2>
+            <p class="text-xl mb-2">あなたのスコア</p>
+            <p class="text-5xl font-bold mb-4 text-yellow-300"><span id="finalScore">0</span> 皿</p>
+            
+            <div class="bg-white text-red-800 p-4 rounded mb-4">
+                <p class="text-sm">認定段位</p>
+                <h3 class="text-4xl font-bold" id="rankTitle">見習い</h3>
+                <p class="text-xs mt-2 text-gray-500" id="rankDesc">まだまだ修行が足りないようだ...</p>
+            </div>
+
+            <button class="btn" onclick="resetGame()">再挑戦</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * Game Logic
+     */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Game State
+    let gameState = 'START'; // START, PLAYING, END
+    let score = 0;
+    let timeLeft = 60;
+    let lastTime = 0;
+    let gameLoopId;
+    let difficultyMultiplier = 1;
+
+    // Assets (Using Emojis)
+    const PLAYER_EMOJI = '🤵'; // The Gyoza Thrower
+    const STAFF_EMOJIS = ['👨‍🍳', '👩‍🍳', '💁', '💁‍♂️'];
+    const GYOZA_EMOJI = '🥟';
+    const HIT_EMOJIS = ['😋', '❤️', '👍', '✨'];
+
+    // Entities
+    let projectiles = [];
+    let targets = [];
+    let particles = [];
+    let player = { x: 0, y: 0, size: 60 };
+
+    // Audio context (optional placeholder, kept silent for static file simplicity)
+    // We use visual feedback instead.
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        player.x = canvas.width / 2;
+        player.y = canvas.height - 80;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Input Handling
+    canvas.addEventListener('pointerdown', (e) => {
+        if (gameState !== 'PLAYING') return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        throwGyoza(clickX, clickY);
+    });
+
+    function throwGyoza(targetX, targetY) {
+        const angle = Math.atan2(targetY - player.y, targetX - player.x);
+        const speed = 15;
+        
+        projectiles.push({
+            x: player.x,
+            y: player.y - 20,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            rotation: 0,
+            active: true
+        });
+    }
+
+    class Target {
+        constructor() {
+            this.reset();
+            // Initial random position to prevent all appearing at same spot
+            this.x = Math.random() * (canvas.width - 100) + 50;
+            this.y = Math.random() * (canvas.height / 2) + 50;
+        }
+
+        reset() {
+            this.emoji = STAFF_EMOJIS[Math.floor(Math.random() * STAFF_EMOJIS.length)];
+            this.size = 50;
+            this.x = Math.random() * (canvas.width - 100) + 50;
+            this.y = -100; // Start above screen
+            // Random movement patterns
+            this.vx = (Math.random() - 0.5) * 4 * difficultyMultiplier;
+            this.vy = (Math.random() * 2 + 1) * difficultyMultiplier; 
+            this.state = 'active'; // active, hit
+            this.hitTimer = 0;
+            this.changeDirTimer = 0;
+        }
+
+        update() {
+            if (this.state === 'hit') {
+                this.hitTimer--;
+                if (this.hitTimer <= 0) this.reset();
+                return;
+            }
+
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // Change direction randomly
+            this.changeDirTimer++;
+            if (this.changeDirTimer > 60) {
+                this.vx = (Math.random() - 0.5) * 4 * difficultyMultiplier;
+                this.changeDirTimer = 0;
+            }
+
+            // Bounce off walls
+            if (this.x < 30 || this.x > canvas.width - 30) this.vx *= -1;
+
+            // Reset if goes below screen
+            if (this.y > canvas.height + 50) {
+                this.reset();
+            }
+        }
+
+        draw() {
+            ctx.font = `${this.size}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            if (this.state === 'hit') {
+                ctx.globalAlpha = this.hitTimer / 20;
+                ctx.fillText('😋', this.x, this.y);
+                ctx.globalAlpha = 1.0;
+            } else {
+                // Flip sprite based on direction
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (this.vx < 0) ctx.scale(-1, 1);
+                ctx.fillText(this.emoji, 0, 0);
+                ctx.restore();
+            }
+        }
+    }
+
+    class Particle {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.vx = (Math.random() - 0.5) * 10;
+            this.vy = (Math.random() - 0.5) * 10;
+            this.life = 30;
+            this.text = HIT_EMOJIS[Math.floor(Math.random() * HIT_EMOJIS.length)];
+            this.size = Math.random() * 20 + 10;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.life--;
+        }
+        draw() {
+            ctx.globalAlpha = this.life / 30;
+            ctx.font = `${this.size}px serif`;
+            ctx.fillText(this.text, this.x, this.y);
+            ctx.globalAlpha = 1.0;
+        }
+    }
+
+    function startGame() {
+        gameState = 'PLAYING';
+        score = 0;
+        timeLeft = 60;
+        difficultyMultiplier = 1;
+        projectiles = [];
+        particles = [];
+        targets = [];
+        
+        // Create initial targets
+        for(let i=0; i<3; i++) targets.push(new Target());
+
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('resultScreen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        
+        updateHUD();
+        lastTime = performance.now();
+        gameLoopId = requestAnimationFrame(gameLoop);
+    }
+
+    function resetGame() {
+        document.getElementById('resultScreen').classList.add('hidden');
+        document.getElementById('startScreen').classList.remove('hidden');
+        document.getElementById('hud').classList.add('hidden');
+        
+        // Quick render of background
+        ctx.fillStyle = '#fdfbf7'; // Clear canvas
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function endGame() {
+        gameState = 'END';
+        cancelAnimationFrame(gameLoopId);
+        
+        // Calculate Rank
+        const rank = calculateRank(score);
+        
+        document.getElementById('finalScore').innerText = score;
+        document.getElementById('rankTitle').innerText = rank.title;
+        document.getElementById('rankDesc').innerText = rank.desc;
+        
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('resultScreen').classList.remove('hidden');
+    }
+
+    function calculateRank(s) {
+        if (s < 10) return { title: "5級：皿洗い見習い", desc: "まずは皿洗いから始めましょう。" };
+        if (s < 20) return { title: "4級：餃子包み係", desc: "皮を破かないようにね。" };
+        if (s < 40) return { title: "3級：焼き場担当", desc: "パリッと焼けるようになってきた！" };
+        if (s < 60) return { title: "2級：フロアチーフ", desc: "お客様への提供スピードが命。" };
+        if (s < 80) return { title: "1級：店長", desc: "この店は君に任せた！" };
+        if (s < 100) return { title: "初段：餃子王", desc: "街で一番の餃子投げ。" };
+        if (s < 130) return { title: "師範代", desc: "もはや投げる姿が見えない。" };
+        return { title: "免許皆伝：餃子神", desc: "餃子と一体化した存在。" };
+    }
+
+    function updateHUD() {
+        document.getElementById('score').innerText = score;
+        document.getElementById('timer').innerText = Math.ceil(timeLeft);
+    }
+
+    function gameLoop(timestamp) {
+        if (gameState !== 'PLAYING') return;
+
+        const deltaTime = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
+
+        // Timer Logic
+        timeLeft -= deltaTime;
+        if (timeLeft <= 0) {
+            timeLeft = 0;
+            endGame();
+            return;
+        }
+        
+        // Increase difficulty over time (targets move faster, more targets appear)
+        difficultyMultiplier = 1 + (60 - timeLeft) / 30; // 1.0 -> 3.0 speed
+        if (targets.length < 3 + Math.floor((60 - timeLeft) / 15)) {
+            targets.push(new Target());
+        }
+
+        updateHUD();
+
+        // Clear Canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw Player
+        ctx.font = "60px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(PLAYER_EMOJI, player.x, player.y);
+
+        // Update & Draw Projectiles
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            let p = projectiles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rotation += 0.2;
+
+            // Draw Gyoza
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.font = "30px serif";
+            ctx.textBaseline = "middle";
+            ctx.fillText(GYOZA_EMOJI, 0, 0);
+            ctx.restore();
+
+            // Remove if out of bounds
+            if (p.x < -50 || p.x > canvas.width + 50 || p.y < -50 || p.y > canvas.height + 50) {
+                projectiles.splice(i, 1);
+                continue;
+            }
+
+            // Collision Detection
+            for (let t of targets) {
+                if (t.state === 'active') {
+                    const dx = p.x - t.x;
+                    const dy = p.y - t.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (dist < 40) { // Hit!
+                        t.state = 'hit';
+                        t.hitTimer = 20;
+                        score++;
+                        projectiles.splice(i, 1);
+                        
+                        // Add hit effect
+                        for(let k=0; k<3; k++) {
+                            particles.push(new Particle(t.x, t.y));
+                        }
+                        break; // One gyoza hits one target
+                    }
+                }
+            }
+        }
+
+        // Update & Draw Targets
+        targets.forEach(t => {
+            t.update();
+            t.draw();
+        });
+
+        // Update & Draw Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.update();
+            p.draw();
+            if (p.life <= 0) particles.splice(i, 1);
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Initial Draw
+    ctx.fillStyle = '#fdfbf7';
+    ctx.font = "30px serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Loading...", canvas.width/2, canvas.height/2);
+
+</script>
+</body>
+</html>
