@@ -101,6 +101,48 @@
             100% { transform: translateY(0px); }
         }
         .floating { animation: float 3s ease-in-out infinite; }
+
+        @keyframes warningFlash {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+
+        .warning-text {
+            animation: warningFlash 0.5s ease-in-out infinite;
+            font-size: 6rem;
+            color: #FF0000;
+            text-shadow: 0 0 20px #FF0000, 0 0 40px #FF0000;
+            font-weight: bold;
+        }
+
+        .shake-screen {
+            animation: shake 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .boss-attack-warning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            color: #FF0000;
+            text-shadow: 0 0 20px #FF0000;
+            font-weight: bold;
+            animation: pulse 0.3s ease-in-out infinite;
+            z-index: 15;
+            pointer-events: none;
+        }
         
         canvas {
             display: block;
@@ -121,6 +163,25 @@
         <div>得点: <span id="score">0</span>皿</div>
     </div>
 
+    <!-- Boss HUD -->
+    <div id="bossHud" class="hud hidden">
+        <div>ボス戦残り時間: <span id="bossTimer">45</span>秒</div>
+        <div>ボスHP: <span id="bossHP">50</span>/50</div>
+        <div>あなたのHP: <span id="playerHP">❤️❤️❤️</span></div>
+    </div>
+
+    <!-- Dodge Button -->
+    <div id="dodgeButton" class="hidden" style="position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 20;">
+        <button class="btn interactive" onclick="attemptDodge()" style="font-size: 2rem; padding: 20px 60px; animation: pulse 0.3s ease-in-out infinite;">
+            回避！
+        </button>
+    </div>
+
+    <!-- Warning Screen -->
+    <div id="warningScreen" class="ui-layer interactive hidden" style="background: rgba(0,0,0,0.8);">
+        <div class="warning-text shake-screen">WARNING!</div>
+    </div>
+
     <!-- Start Screen -->
     <div id="startScreen" class="ui-layer interactive">
         <div class="retro-box floating">
@@ -137,13 +198,34 @@
             <h2 class="text-3xl mb-2">試験終了！</h2>
             <p class="text-xl mb-2">あなたのスコア</p>
             <p class="text-5xl font-bold mb-4 text-yellow-300"><span id="finalScore">0</span> 皿</p>
-            
+
             <div class="bg-white text-red-800 p-4 rounded mb-4">
                 <p class="text-sm">認定段位</p>
                 <h3 class="text-4xl font-bold" id="rankTitle">見習い</h3>
                 <p class="text-xs mt-2 text-gray-500" id="rankDesc">まだまだ修行が足りないようだ...</p>
             </div>
 
+            <button class="btn" onclick="resetGame()">再挑戦</button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen (Boss Battle Failed) -->
+    <div id="gameOverScreen" class="ui-layer interactive hidden">
+        <div class="retro-box">
+            <h2 class="text-5xl mb-4" style="color: #FF0000;">💥 GAME OVER 💥</h2>
+            <p class="text-2xl mb-4">時間切れ！画面が爆発した！</p>
+            <p class="text-xl mb-2">到達スコア: <span id="gameOverScore">0</span> 皿</p>
+            <button class="btn" onclick="resetGame()">再挑戦</button>
+        </div>
+    </div>
+
+    <!-- Boss Victory Screen -->
+    <div id="bossVictoryScreen" class="ui-layer interactive hidden">
+        <div class="retro-box">
+            <h2 class="text-5xl mb-4" style="color: #FFD700;">🏆 ボス撃破！ 🏆</h2>
+            <p class="text-2xl mb-4">見事、謎の存在を倒した！</p>
+            <p class="text-xl mb-2">最終スコア: <span id="victoryScore">0</span> 皿</p>
+            <p class="text-3xl font-bold mb-4 text-yellow-300">あなたは真の餃子マスターだ！</p>
             <button class="btn" onclick="resetGame()">再挑戦</button>
         </div>
     </div>
@@ -157,27 +239,118 @@
     const ctx = canvas.getContext('2d');
     
     // Game State
-    let gameState = 'START'; // START, PLAYING, END
+    let gameState = 'START'; // START, PLAYING, WARNING, BOSS_BATTLE, END
     let score = 0;
     let timeLeft = 60;
     let lastTime = 0;
     let gameLoopId;
     let difficultyMultiplier = 1;
+    let bossHP = 50;
+    let bossTimeLeft = 45;
+    let warningTimer = 0;
+    let boss = null;
+    let bossImage = new Image();
+    bossImage.src = 'unknown.png';
+    let playerHP = 3;
+    let bossAttack = null;
+    let dodgeWindow = null;
 
     // Assets (Using Emojis)
     const PLAYER_EMOJI = '🤵'; // The Gyoza Thrower
     const STAFF_EMOJIS = ['👨‍🍳', '👩‍🍳', '💁', '💁‍♂️'];
     const GYOZA_EMOJI = '🥟';
     const HIT_EMOJIS = ['😋', '❤️', '👍', '✨'];
+    const BOSS_PHRASES = [
+        'パンパンクロール',
+        '死んだんじゃないの〜？',
+        'カレー味のロッカー',
+        'それオンセー',
+        'ネギルしないで',
+        'あとでかいのは腹か'
+    ];
 
     // Entities
     let projectiles = [];
     let targets = [];
     let particles = [];
     let player = { x: 0, y: 0, size: 60 };
+    let bossDialogue = null;
 
-    // Audio context (optional placeholder, kept silent for static file simplicity)
-    // We use visual feedback instead.
+    // Audio System
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        switch(type) {
+            case 'throw':
+                oscillator.frequency.value = 400;
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.1);
+                break;
+            case 'hit':
+                oscillator.frequency.value = 600;
+                oscillator.type = 'square';
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.15);
+                break;
+            case 'bossHit':
+                oscillator.frequency.value = 200;
+                oscillator.type = 'sawtooth';
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+                break;
+            case 'warning':
+                oscillator.frequency.value = 150;
+                oscillator.type = 'triangle';
+                gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+                break;
+            case 'explosion':
+                const noise = audioContext.createBufferSource();
+                const bufferSize = audioContext.sampleRate * 1;
+                const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                noise.buffer = buffer;
+                noise.connect(gainNode);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+                noise.start(audioContext.currentTime);
+                noise.stop(audioContext.currentTime + 1);
+                return;
+            case 'victory':
+                // Victory jingle
+                [523, 587, 659, 784].forEach((freq, i) => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    osc.frequency.value = freq;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.1, audioContext.currentTime + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.15 + 0.3);
+                    osc.start(audioContext.currentTime + i * 0.15);
+                    osc.stop(audioContext.currentTime + i * 0.15 + 0.3);
+                });
+                return;
+        }
+    }
 
     function resize() {
         canvas.width = window.innerWidth;
@@ -190,8 +363,11 @@
 
     // Input Handling
     canvas.addEventListener('pointerdown', (e) => {
-        if (gameState !== 'PLAYING') return;
-        
+        if (gameState !== 'PLAYING' && gameState !== 'BOSS_BATTLE') return;
+
+        // Don't throw gyoza during dodge window
+        if (bossAttack && bossAttack.currentTime >= bossAttack.chargeTime) return;
+
         const rect = canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
@@ -202,7 +378,7 @@
     function throwGyoza(targetX, targetY) {
         const angle = Math.atan2(targetY - player.y, targetX - player.x);
         const speed = 15;
-        
+
         projectiles.push({
             x: player.x,
             y: player.y - 20,
@@ -211,6 +387,8 @@
             rotation: 0,
             active: true
         });
+
+        playSound('throw');
     }
 
     class Target {
@@ -303,6 +481,134 @@
         }
     }
 
+    class Boss {
+        constructor() {
+            this.x = canvas.width / 2;
+            this.y = canvas.height / 3;
+            this.size = 150;
+            this.hp = 50;
+            this.maxHP = 50;
+            this.vx = 3;
+            this.vy = 2;
+            this.hitFlash = 0;
+            this.attackTimer = 0;
+            this.attackInterval = 200; // Attack every 3.3 seconds (at 60fps)
+            this.chargeScale = 1;
+        }
+
+        update() {
+            // Move boss in a pattern (slower during charge)
+            const speedMult = bossAttack && bossAttack.currentTime < bossAttack.chargeTime ? 0.3 : 1;
+            this.x += this.vx * speedMult;
+            this.y += this.vy * speedMult;
+
+            // Bounce off walls
+            if (this.x < this.size/2 || this.x > canvas.width - this.size/2) {
+                this.vx *= -1;
+            }
+            if (this.y < this.size/2 || this.y > canvas.height/2) {
+                this.vy *= -1;
+            }
+
+            if (this.hitFlash > 0) this.hitFlash--;
+
+            // Attack timer
+            this.attackTimer++;
+            if (this.attackTimer >= this.attackInterval) {
+                this.attack();
+                this.attackTimer = 0;
+            }
+
+            // Charge animation
+            if (bossAttack && bossAttack.currentTime < bossAttack.chargeTime) {
+                const chargeProgress = bossAttack.currentTime / bossAttack.chargeTime;
+                this.chargeScale = 1 + Math.sin(chargeProgress * Math.PI * 4) * 0.2 * chargeProgress;
+            } else {
+                this.chargeScale = 1;
+            }
+        }
+
+        attack() {
+            // Create attack with charge phase
+            bossAttack = {
+                chargeTime: 90, // 1.5 second charge
+                dodgeWindowStart: 90,
+                dodgeWindowEnd: 150, // 1 second dodge window
+                totalTime: 180,
+                currentTime: 0,
+                dodged: false,
+                text: BOSS_PHRASES[Math.floor(Math.random() * BOSS_PHRASES.length)]
+            };
+            playSound('warning');
+        }
+
+        draw() {
+            // Draw HP bar
+            const barWidth = 300;
+            const barHeight = 20;
+            const barX = canvas.width / 2 - barWidth / 2;
+            const barY = 50;
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+            ctx.fillStyle = '#00FF00';
+            ctx.fillRect(barX, barY, barWidth * (this.hp / this.maxHP), barHeight);
+
+            // Draw boss image with charge effect
+            if (bossImage.complete) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.chargeScale, this.chargeScale);
+
+                // Flash red during charge
+                if (bossAttack && bossAttack.currentTime < bossAttack.chargeTime) {
+                    ctx.filter = `hue-rotate(${Math.sin(bossAttack.currentTime * 0.3) * 180}deg) brightness(1.5)`;
+                }
+
+                if (this.hitFlash > 0) {
+                    ctx.globalAlpha = 0.5;
+                }
+
+                ctx.drawImage(bossImage, -this.size/2, -this.size/2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        hit() {
+            this.hp--;
+            this.hitFlash = 5;
+
+            // Show random boss phrase
+            const phrase = BOSS_PHRASES[Math.floor(Math.random() * BOSS_PHRASES.length)];
+            bossDialogue = {
+                text: phrase,
+                x: this.x,
+                y: this.y - this.size / 2 - 30,
+                life: 60,
+                update() {
+                    this.y -= 1;
+                    this.life--;
+                },
+                draw() {
+                    ctx.save();
+                    ctx.globalAlpha = Math.min(1, this.life / 20);
+                    ctx.font = 'bold 24px serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 4;
+                    ctx.strokeText(this.text, this.x, this.y);
+                    ctx.fillText(this.text, this.x, this.y);
+                    ctx.restore();
+                }
+            };
+
+            return this.hp <= 0;
+        }
+    }
+
     function startGame() {
         gameState = 'PLAYING';
         score = 0;
@@ -311,14 +617,25 @@
         projectiles = [];
         particles = [];
         targets = [];
-        
+        bossHP = 50;
+        bossTimeLeft = 45;
+        warningTimer = 0;
+        boss = null;
+        playerHP = 3;
+        bossAttack = null;
+
         // Create initial targets
         for(let i=0; i<3; i++) targets.push(new Target());
 
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('resultScreen').classList.add('hidden');
+        document.getElementById('gameOverScreen').classList.add('hidden');
+        document.getElementById('bossVictoryScreen').classList.add('hidden');
+        document.getElementById('warningScreen').classList.add('hidden');
+        document.getElementById('dodgeButton').classList.add('hidden');
         document.getElementById('hud').classList.remove('hidden');
-        
+        document.getElementById('bossHud').classList.add('hidden');
+
         updateHUD();
         lastTime = performance.now();
         gameLoopId = requestAnimationFrame(gameLoop);
@@ -326,9 +643,14 @@
 
     function resetGame() {
         document.getElementById('resultScreen').classList.add('hidden');
+        document.getElementById('gameOverScreen').classList.add('hidden');
+        document.getElementById('bossVictoryScreen').classList.add('hidden');
+        document.getElementById('warningScreen').classList.add('hidden');
+        document.getElementById('dodgeButton').classList.add('hidden');
         document.getElementById('startScreen').classList.remove('hidden');
         document.getElementById('hud').classList.add('hidden');
-        
+        document.getElementById('bossHud').classList.add('hidden');
+
         // Quick render of background
         ctx.fillStyle = '#fdfbf7'; // Clear canvas
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -363,29 +685,175 @@
     function updateHUD() {
         document.getElementById('score').innerText = score;
         document.getElementById('timer').innerText = Math.ceil(timeLeft);
+        if (boss) {
+            document.getElementById('bossHP').innerText = boss.hp;
+            document.getElementById('bossTimer').innerText = Math.ceil(bossTimeLeft);
+            const hearts = '❤️'.repeat(playerHP) + '🖤'.repeat(3 - playerHP);
+            document.getElementById('playerHP').innerText = hearts;
+        }
+    }
+
+    function attemptDodge() {
+        if (!bossAttack) return;
+
+        const currentTime = bossAttack.currentTime;
+        const isInWindow = currentTime >= bossAttack.dodgeWindowStart && currentTime <= bossAttack.dodgeWindowEnd;
+
+        if (isInWindow) {
+            // Successful dodge!
+            bossAttack.dodged = true;
+            document.getElementById('dodgeButton').classList.add('hidden');
+            playSound('hit'); // Success sound
+
+            // Visual feedback
+            for(let i=0; i<10; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height - 100,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: -Math.random() * 10,
+                    life: 30,
+                    text: '✨',
+                    size: Math.random() * 30 + 20,
+                    update() {
+                        this.x += this.vx;
+                        this.y += this.vy;
+                        this.life--;
+                    },
+                    draw() {
+                        ctx.globalAlpha = this.life / 30;
+                        ctx.font = `${this.size}px serif`;
+                        ctx.fillText(this.text, this.x, this.y);
+                        ctx.globalAlpha = 1.0;
+                    }
+                });
+            }
+        } else {
+            // Failed - too early or too late
+            playSound('explosion');
+        }
     }
 
     function gameLoop(timestamp) {
-        if (gameState !== 'PLAYING') return;
+        if (gameState !== 'PLAYING' && gameState !== 'WARNING' && gameState !== 'BOSS_BATTLE') return;
 
         const deltaTime = (timestamp - lastTime) / 1000;
         lastTime = timestamp;
 
-        // Timer Logic
-        timeLeft -= deltaTime;
-        if (timeLeft <= 0) {
-            timeLeft = 0;
-            endGame();
+        // Check if we need to trigger boss battle
+        if (gameState === 'PLAYING' && score >= 50) {
+            gameState = 'WARNING';
+            warningTimer = 3; // 3 seconds warning
+            document.getElementById('warningScreen').classList.remove('hidden');
+            playSound('warning');
+            lastTime = timestamp;
+            requestAnimationFrame(gameLoop);
             return;
         }
-        
-        // Increase difficulty over time (targets move faster, more targets appear)
-        difficultyMultiplier = 1 + (60 - timeLeft) / 30; // 1.0 -> 3.0 speed
-        if (targets.length < 3 + Math.floor((60 - timeLeft) / 15)) {
-            targets.push(new Target());
+
+        // WARNING state
+        if (gameState === 'WARNING') {
+            warningTimer -= deltaTime;
+            if (warningTimer <= 0) {
+                gameState = 'BOSS_BATTLE';
+                boss = new Boss();
+                bossTimeLeft = 30;
+                targets = []; // Clear normal targets
+                projectiles = [];
+                document.getElementById('warningScreen').classList.add('hidden');
+                document.getElementById('hud').classList.add('hidden');
+                document.getElementById('bossHud').classList.remove('hidden');
+            }
+            requestAnimationFrame(gameLoop);
+            return;
         }
 
-        updateHUD();
+        // BOSS_BATTLE state
+        if (gameState === 'BOSS_BATTLE') {
+            bossTimeLeft -= deltaTime;
+            if (bossTimeLeft <= 0) {
+                // Time's up! Game Over with explosion
+                gameState = 'GAME_OVER';
+                cancelAnimationFrame(gameLoopId);
+                showExplosionAndGameOver();
+                return;
+            }
+
+            // Handle boss attack
+            if (bossAttack) {
+                bossAttack.currentTime++;
+
+                // Show dodge button during dodge window
+                if (bossAttack.currentTime >= bossAttack.dodgeWindowStart &&
+                    bossAttack.currentTime <= bossAttack.dodgeWindowEnd &&
+                    !bossAttack.dodged) {
+                    document.getElementById('dodgeButton').classList.remove('hidden');
+                } else {
+                    document.getElementById('dodgeButton').classList.add('hidden');
+                }
+
+                // Attack hits if not dodged
+                if (bossAttack.currentTime >= bossAttack.totalTime) {
+                    if (!bossAttack.dodged) {
+                        // Player took damage
+                        playerHP--;
+                        playSound('explosion');
+
+                        // Screen shake effect
+                        for(let i=0; i<20; i++) {
+                            particles.push({
+                                x: player.x + (Math.random() - 0.5) * 100,
+                                y: player.y + (Math.random() - 0.5) * 100,
+                                vx: (Math.random() - 0.5) * 20,
+                                vy: (Math.random() - 0.5) * 20,
+                                life: 30,
+                                text: '💥',
+                                size: Math.random() * 40 + 20,
+                                update() {
+                                    this.x += this.vx;
+                                    this.y += this.vy;
+                                    this.life--;
+                                },
+                                draw() {
+                                    ctx.globalAlpha = this.life / 30;
+                                    ctx.font = `${this.size}px serif`;
+                                    ctx.fillText(this.text, this.x, this.y);
+                                    ctx.globalAlpha = 1.0;
+                                }
+                            });
+                        }
+
+                        if (playerHP <= 0) {
+                            // Player died
+                            gameState = 'GAME_OVER';
+                            cancelAnimationFrame(gameLoopId);
+                            showExplosionAndGameOver();
+                            return;
+                        }
+                    }
+                    bossAttack = null;
+                }
+            }
+
+            updateHUD();
+        } else {
+            // PLAYING state
+            // Timer Logic
+            timeLeft -= deltaTime;
+            if (timeLeft <= 0) {
+                timeLeft = 0;
+                endGame();
+                return;
+            }
+
+            // Increase difficulty over time (targets move faster, more targets appear)
+            difficultyMultiplier = 1 + (60 - timeLeft) / 30; // 1.0 -> 3.0 speed
+            if (targets.length < 3 + Math.floor((60 - timeLeft) / 15)) {
+                targets.push(new Target());
+            }
+
+            updateHUD();
+        }
 
         // Clear Canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -419,33 +887,67 @@
             }
 
             // Collision Detection
-            for (let t of targets) {
-                if (t.state === 'active') {
-                    const dx = p.x - t.x;
-                    const dy = p.y - t.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    
-                    if (dist < 40) { // Hit!
-                        t.state = 'hit';
-                        t.hitTimer = 20;
-                        score++;
-                        projectiles.splice(i, 1);
-                        
-                        // Add hit effect
-                        for(let k=0; k<3; k++) {
-                            particles.push(new Particle(t.x, t.y));
+            if (gameState === 'BOSS_BATTLE' && boss) {
+                // Boss collision
+                const dx = p.x - boss.x;
+                const dy = p.y - boss.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist < boss.size / 2) {
+                    const defeated = boss.hit();
+                    projectiles.splice(i, 1);
+                    playSound('bossHit');
+
+                    // Add hit effect
+                    for(let k=0; k<5; k++) {
+                        particles.push(new Particle(boss.x, boss.y));
+                    }
+
+                    if (defeated) {
+                        // Boss defeated!
+                        gameState = 'BOSS_VICTORY';
+                        cancelAnimationFrame(gameLoopId);
+                        showBossVictory();
+                        return;
+                    }
+                }
+            } else {
+                // Normal target collision
+                for (let t of targets) {
+                    if (t.state === 'active') {
+                        const dx = p.x - t.x;
+                        const dy = p.y - t.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+
+                        if (dist < 40) { // Hit!
+                            t.state = 'hit';
+                            t.hitTimer = 20;
+                            score++;
+                            projectiles.splice(i, 1);
+                            playSound('hit');
+
+                            // Add hit effect
+                            for(let k=0; k<3; k++) {
+                                particles.push(new Particle(t.x, t.y));
+                            }
+                            break; // One gyoza hits one target
                         }
-                        break; // One gyoza hits one target
                     }
                 }
             }
         }
 
-        // Update & Draw Targets
-        targets.forEach(t => {
-            t.update();
-            t.draw();
-        });
+        // Update & Draw Boss or Targets
+        if (gameState === 'BOSS_BATTLE' && boss) {
+            boss.update();
+            boss.draw();
+        } else {
+            // Update & Draw Targets
+            targets.forEach(t => {
+                t.update();
+                t.draw();
+            });
+        }
 
         // Update & Draw Particles
         for (let i = particles.length - 1; i >= 0; i--) {
@@ -455,7 +957,130 @@
             if (p.life <= 0) particles.splice(i, 1);
         }
 
+        // Update & Draw Boss Dialogue
+        if (bossDialogue) {
+            bossDialogue.update();
+            bossDialogue.draw();
+            if (bossDialogue.life <= 0) {
+                bossDialogue = null;
+            }
+        }
+
+        // Draw Boss Attack Warning
+        if (bossAttack && gameState === 'BOSS_BATTLE') {
+            // Charge phase (boss is powering up)
+            if (bossAttack.currentTime < bossAttack.chargeTime) {
+                ctx.save();
+                ctx.font = 'bold 52px serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#FF6600';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 5;
+                const alpha = Math.sin(bossAttack.currentTime * 0.3) * 0.3 + 0.7;
+                ctx.globalAlpha = alpha;
+                ctx.strokeText('⚡ ボスが力をためている！ ⚡', canvas.width / 2, canvas.height / 2);
+                ctx.fillText('⚡ ボスが力をためている！ ⚡', canvas.width / 2, canvas.height / 2);
+
+                // Show boss phrase
+                ctx.font = 'bold 36px serif';
+                ctx.fillStyle = '#FFFF00';
+                ctx.strokeText(bossAttack.text, canvas.width / 2, canvas.height / 2 + 60);
+                ctx.fillText(bossAttack.text, canvas.width / 2, canvas.height / 2 + 60);
+                ctx.restore();
+            }
+
+            // Dodge window indicator
+            if (bossAttack.currentTime >= bossAttack.dodgeWindowStart &&
+                bossAttack.currentTime <= bossAttack.dodgeWindowEnd) {
+                ctx.save();
+                ctx.font = 'bold 48px serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#00FF00';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 5;
+                const pulse = Math.sin(bossAttack.currentTime * 0.5) * 0.2 + 1;
+                ctx.scale(pulse, pulse);
+                ctx.strokeText('今だ！回避ボタンを押せ！', canvas.width / 2 / pulse, canvas.height / 2 / pulse + 100);
+                ctx.fillText('今だ！回避ボタンを押せ！', canvas.width / 2 / pulse, canvas.height / 2 / pulse + 100);
+                ctx.restore();
+            }
+
+            // Attack execution phase
+            if (bossAttack.currentTime > bossAttack.dodgeWindowEnd && !bossAttack.dodged) {
+                ctx.save();
+                ctx.font = 'bold 96px serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#FF0000';
+                ctx.globalAlpha = 0.9;
+                const shake = Math.sin(bossAttack.currentTime * 2) * 20;
+                ctx.fillText('💥', canvas.width / 2 + shake, canvas.height / 2);
+                ctx.restore();
+            }
+        }
+
         requestAnimationFrame(gameLoop);
+    }
+
+    function showExplosionAndGameOver() {
+        playSound('explosion');
+
+        // Create explosion effect
+        particles = [];
+        for (let i = 0; i < 50; i++) {
+            particles.push({
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                vx: (Math.random() - 0.5) * 30,
+                vy: (Math.random() - 0.5) * 30,
+                life: 60,
+                text: '💥',
+                size: Math.random() * 40 + 20,
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.life--;
+                },
+                draw() {
+                    ctx.globalAlpha = this.life / 60;
+                    ctx.font = `${this.size}px serif`;
+                    ctx.fillText(this.text, this.x, this.y);
+                    ctx.globalAlpha = 1.0;
+                }
+            });
+        }
+
+        // Animate explosion
+        let explosionFrames = 60;
+        const explosionLoop = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#FF0000';
+            ctx.globalAlpha = 0.3 * (explosionFrames / 60);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1.0;
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            explosionFrames--;
+            if (explosionFrames > 0) {
+                requestAnimationFrame(explosionLoop);
+            } else {
+                document.getElementById('gameOverScore').innerText = score;
+                document.getElementById('bossHud').classList.add('hidden');
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+            }
+        };
+        explosionLoop();
+    }
+
+    function showBossVictory() {
+        playSound('victory');
+        document.getElementById('victoryScore').innerText = score;
+        document.getElementById('bossHud').classList.add('hidden');
+        document.getElementById('bossVictoryScreen').classList.remove('hidden');
     }
 
     // Initial Draw
