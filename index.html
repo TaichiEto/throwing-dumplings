@@ -7,14 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=swap');
-        
+
+        /* Fallback in case the Tailwind CDN fails to load: the game must still work */
+        .hidden { display: none !important; }
+
         body {
             font-family: 'Yuji Syuku', serif;
             touch-action: none; /* Prevent zooming/scrolling on mobile */
             background-color: #8B0000; /* Deep Red */
             overflow: hidden;
         }
-        
+
         .game-container {
             position: relative;
             width: 100vw;
@@ -57,6 +60,8 @@
             text-align: center;
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .retro-box h1, .retro-box h2, .retro-box h3 {
@@ -100,11 +105,35 @@
             transition: transform 0.1s;
             margin-top: 10px;
             box-shadow: 0 4px 0 #C49000;
+            font-family: 'Yuji Syuku', serif;
         }
 
         .btn:active {
             transform: translateY(4px);
             box-shadow: 0 0 0 #C49000;
+        }
+
+        .btn-diff {
+            background: #fff;
+            color: #8B0000;
+            box-shadow: 0 4px 0 #999;
+            margin: 4px;
+            opacity: 0.7;
+        }
+
+        .btn-diff.selected {
+            background: #FBC02D;
+            box-shadow: 0 4px 0 #C49000;
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .btn-sub {
+            background: #fff;
+            color: #8B0000;
+            box-shadow: 0 4px 0 #999;
+            font-size: clamp(0.8rem, 3vw, 1rem);
+            padding: 6px 18px;
         }
 
         @media (max-width: 768px) {
@@ -161,6 +190,45 @@
             }
         }
 
+        .sound-btn {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            z-index: 30;
+            background: rgba(255,255,255,0.8);
+            border: 2px solid #D32F2F;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 22px;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .item-legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px 12px;
+            text-align: left;
+            font-size: clamp(0.65rem, 2.5vw, 0.9rem);
+            background: rgba(0,0,0,0.25);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 8px auto;
+            max-width: 480px;
+        }
+
+        .story-text {
+            text-align: left;
+            font-size: clamp(0.85rem, 3vw, 1.1rem) !important;
+            line-height: 1.9;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 10px 0;
+            white-space: pre-line;
+        }
+
         /* Animations */
         @keyframes float {
             0% { transform: translateY(0px); }
@@ -197,6 +265,14 @@
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.1); }
+        }
+
+        @keyframes rainbowGlow {
+            0% { box-shadow: 0 0 20px #ff0000; }
+            25% { box-shadow: 0 0 25px #ffcc00; }
+            50% { box-shadow: 0 0 30px #00ff88; }
+            75% { box-shadow: 0 0 25px #00ccff; }
+            100% { box-shadow: 0 0 20px #ff0000; }
         }
 
         .boss-attack-warning {
@@ -257,7 +333,7 @@
                 max-width: 95%;
             }
         }
-        
+
         canvas {
             display: block;
             width: 100%;
@@ -274,15 +350,19 @@
     <!-- HUD -->
     <div id="hud" class="hud hidden">
         <div>残り時間: <span id="timer">60</span>秒</div>
+        <div>🔥コンボ: <span id="comboDisp">0</span></div>
         <div>得点: <span id="score">0</span>皿</div>
     </div>
 
     <!-- Boss HUD -->
     <div id="bossHud" class="hud boss-hud hidden">
         <div>時間: <span id="bossTimer">45</span>秒</div>
-        <div>ボスHP: <span id="bossHP">50</span>/50</div>
+        <div>ボスHP: <span id="bossHP">50</span>/<span id="bossMaxHP">50</span></div>
         <div>HP: <span id="playerHP">❤️❤️❤️</span></div>
     </div>
+
+    <!-- Sound Toggle -->
+    <button id="soundToggle" class="sound-btn" onclick="toggleSound()">🔊</button>
 
     <!-- Dodge Button -->
     <div id="dodgeButton" class="hidden dodge-button-container">
@@ -300,9 +380,61 @@
     <div id="startScreen" class="ui-layer interactive">
         <div class="retro-box floating">
             <h1 class="text-4xl mb-2">🥟 餃子投げ検定 🥟</h1>
-            <p class="text-lg mb-4">〜目指せ、餃子名人〜</p>
-            <p class="text-sm mb-6">動く店員さんに餃子を投げつけろ！<br>クリック/タップで発射</p>
-            <button class="btn" onclick="startGame()">試験開始</button>
+            <p class="text-lg mb-2">〜目指せ、餃子名人〜</p>
+            <p class="text-sm mb-2">動く店員さんに餃子を投げつけろ！<br>クリック/タップで発射</p>
+            <p class="text-sm mb-1" style="color:#FFD54F;">🏆 ハイスコア: <span id="highScoreDisp">0</span> 皿</p>
+
+            <div class="item-legend">
+                <div>🥷 忍者店員 … 3皿</div>
+                <div>🐱 猫店員 … 2皿</div>
+                <div>🤴 王様店員 … 5皿</div>
+                <div>😡 お客様 … <span style="color:#FF8A80;">−5皿!</span></div>
+                <div>⏰ 時間+5秒</div>
+                <div>🔥 三連発射</div>
+                <div>🥟 巨大餃子</div>
+                <div>⭐ フィーバー!</div>
+            </div>
+
+            <p class="text-sm mb-1">難易度をえらぶ</p>
+            <div class="mb-2">
+                <button id="diffEasy" class="btn btn-diff" onclick="selectDifficulty('easy')">見習い</button>
+                <button id="diffNormal" class="btn btn-diff selected" onclick="selectDifficulty('normal')">職人</button>
+                <button id="diffHard" class="btn btn-diff" onclick="selectDifficulty('hard')">鬼</button>
+            </div>
+
+            <div>
+                <button class="btn" onclick="startGame()">試験開始</button>
+                <button class="btn btn-sub" onclick="toggleStory(true)">📖 物語</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Story (Prologue) Screen -->
+    <div id="storyScreen" class="ui-layer interactive hidden" style="background: rgba(0,0,0,0.85);">
+        <div class="retro-box">
+            <h2 class="text-3xl mb-2">📖 プロローグ 📖</h2>
+            <p class="story-text">昔々、餃子の聖地として栄えた中華街に「投気楼(とうきろう)」という伝説の名店があった。
+
+その店に伝わる究極の給仕術——それが「餃子投げ」。焼きたての餃子を宙に舞わせ、店員が華麗にキャッチして客に届ける神業である。
+
+主人公・餃子投男(ぎょうざ なげお)は、名人の座を懸けた「餃子投げ検定試験」に挑もうとしていた。
+
+しかしその夜、店の奥から不気味な声が響く……
+「この店の餃子、ぜんぶわしのものだ……」
+
+検定の裏で蠢く「謎の存在」。
+餃子投男よ、餃子の未来はお前の右腕にかかっている！</p>
+            <button class="btn" onclick="toggleStory(false)">戻る</button>
+        </div>
+    </div>
+
+    <!-- Boss Intro Screen -->
+    <div id="bossIntroScreen" class="ui-layer interactive hidden" style="background: rgba(0,0,0,0.9);">
+        <div class="retro-box" style="animation: rainbowGlow 2s linear infinite;">
+            <img src="unknown.png" alt="謎の存在" class="floating" style="width: clamp(80px, 25vw, 150px); margin: 0 auto 10px;">
+            <h2 class="text-3xl mb-2" style="color:#FF5252;">謎の存在、現る！</h2>
+            <p id="bossIntroText" class="story-text" style="min-height: 4em;"></p>
+            <button id="bossIntroBtn" class="btn" onclick="advanceBossIntro()">▶ 次へ</button>
         </div>
     </div>
 
@@ -311,12 +443,19 @@
         <div class="retro-box">
             <h2 class="text-3xl mb-2">試験終了！</h2>
             <p class="text-xl mb-2">あなたのスコア</p>
-            <p class="text-5xl font-bold mb-4 text-yellow-300"><span id="finalScore">0</span> 皿</p>
+            <p class="text-5xl font-bold mb-2 text-yellow-300"><span id="finalScore">0</span> 皿</p>
+            <p id="newRecord" class="text-xl mb-2 hidden" style="color:#FFD700; animation: pulse 0.5s ease-in-out infinite;">✨ 新記録!! ✨</p>
 
-            <div class="bg-white text-red-800 p-4 rounded mb-4">
+            <div class="bg-white text-red-800 p-4 rounded mb-2">
                 <p class="text-sm">認定段位</p>
                 <h3 class="text-4xl font-bold" id="rankTitle">見習い</h3>
                 <p class="text-xs mt-2 text-gray-500" id="rankDesc">まだまだ修行が足りないようだ...</p>
+            </div>
+
+            <div class="item-legend" style="grid-template-columns: 1fr;">
+                <div>🔥 最大コンボ: <span id="statMaxCombo">0</span></div>
+                <div>🎯 命中率: <span id="statAccuracy">0</span>%</div>
+                <div>🏆 ハイスコア: <span id="statHighScore">0</span> 皿</div>
             </div>
 
             <button class="btn" onclick="resetGame()">再挑戦</button>
@@ -327,7 +466,12 @@
     <div id="gameOverScreen" class="ui-layer interactive hidden">
         <div class="retro-box">
             <h2 class="text-5xl mb-4" style="color: #FF0000;">💥 GAME OVER 💥</h2>
-            <p class="text-2xl mb-4">時間切れ！画面が爆発した！</p>
+            <p class="text-2xl mb-2">餃子投男は倒れた……</p>
+            <p class="story-text">投気楼は「謎の存在」の手に落ちた。
+店の餃子はすべてカレー味に変えられてしまったという……
+
+だが、餃子投男の魂は不滅。
+立ち上がれ、再び餃子を握るのだ！</p>
             <p class="text-xl mb-2">到達スコア: <span id="gameOverScore">0</span> 皿</p>
             <button class="btn" onclick="resetGame()">再挑戦</button>
         </div>
@@ -337,8 +481,18 @@
     <div id="bossVictoryScreen" class="ui-layer interactive hidden">
         <div class="retro-box">
             <h2 class="text-5xl mb-4" style="color: #FFD700;">🏆 ボス撃破！ 🏆</h2>
-            <p class="text-2xl mb-4">見事、謎の存在を倒した！</p>
+            <p class="text-2xl mb-2">見事、謎の存在を倒した！</p>
+            <p class="story-text">「ぐぬぬ……この餃子、うますぎる……」
+
+謎の存在は餃子の美味しさに心を打たれ、光となって消えていった。
+投気楼に平和が戻り、餃子投男の名は伝説として語り継がれることとなった。
+
+——後日、店の隅で餃子を頬張る謎の常連客の姿があったという。</p>
             <p class="text-xl mb-2">最終スコア: <span id="victoryScore">0</span> 皿</p>
+            <div class="item-legend" style="grid-template-columns: 1fr;">
+                <div>🔥 最大コンボ: <span id="victoryMaxCombo">0</span></div>
+                <div>🎯 命中率: <span id="victoryAccuracy">0</span>%</div>
+            </div>
             <p class="text-3xl font-bold mb-4 text-yellow-300">あなたは真の餃子マスターだ！</p>
             <button class="btn" onclick="resetGame()">再挑戦</button>
         </div>
@@ -351,15 +505,14 @@
      */
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    
+
     // Game State
-    let gameState = 'START'; // START, PLAYING, WARNING, BOSS_BATTLE, END
+    let gameState = 'START'; // START, PLAYING, WARNING, BOSS_INTRO, BOSS_BATTLE, END
     let score = 0;
     let timeLeft = 60;
     let lastTime = 0;
     let gameLoopId;
     let difficultyMultiplier = 1;
-    let bossHP = 50;
     let bossTimeLeft = 45;
     let warningTimer = 0;
     let boss = null;
@@ -367,7 +520,36 @@
     bossImage.src = 'unknown.png';
     let playerHP = 3;
     let bossAttack = null;
-    let dodgeWindow = null;
+
+    // Difficulty
+    const DIFFICULTIES = {
+        easy:   { label: '見習い', speed: 0.75, time: 70, bossHP: 35, bossTime: 40, trigger: 60 },
+        normal: { label: '職人',   speed: 1.0,  time: 60, bossHP: 50, bossTime: 30, trigger: 80 },
+        hard:   { label: '鬼',     speed: 1.35, time: 55, bossHP: 70, bossTime: 25, trigger: 100 }
+    };
+    let currentDifficulty = 'normal';
+
+    // Combo & Stats
+    let combo = 0;
+    let comboTimer = 0;
+    let maxCombo = 0;
+    let throwsCount = 0;
+    let hitsCount = 0;
+    const COMBO_KEEP_TIME = 2.0; // seconds to keep the combo alive
+    const FEVER_COMBO = 15;      // combo threshold that triggers fever
+
+    // Active power-up effects (remaining seconds)
+    let effects = { triple: 0, giant: 0, fever: 0 };
+
+    // High Score (persisted)
+    function loadHighScore() {
+        try { return parseInt(localStorage.getItem('gyoza_highscore') || '0', 10) || 0; }
+        catch(e) { return 0; }
+    }
+    function saveHighScore(s) {
+        try { localStorage.setItem('gyoza_highscore', String(s)); } catch(e) {}
+    }
+    let highScore = loadHighScore();
 
     // Assets (Using Emojis)
     const PLAYER_EMOJI = '🤵'; // The Gyoza Thrower
@@ -382,18 +564,67 @@
         'ネギルしないで',
         'あとでかいのは腹か'
     ];
+    const BOSS_ENRAGE_PHRASES = [
+        'もう怒ったぞ！！',
+        '本気を出すときが来た！！',
+        'わしの真の力を見よ！！',
+        '餃子ごときがぁ！！'
+    ];
+
+    // Target kinds: weighted variety of staff
+    const TARGET_KINDS = [
+        { kind: 'staff',    points: 1,  speedMul: 1.0, size: 50, weight: 62 },
+        { kind: 'cat',      emoji: '🐱', points: 2,  speedMul: 1.5, size: 44, weight: 14 },
+        { kind: 'ninja',    emoji: '🥷', points: 3,  speedMul: 1.9, size: 46, weight: 12 },
+        { kind: 'golden',   emoji: '🤴', points: 5,  speedMul: 2.2, size: 48, weight: 5 },
+        { kind: 'customer', emoji: '😡', points: -5, speedMul: 0.9, size: 52, weight: 7 }
+    ];
+    const TARGET_TOTAL_WEIGHT = TARGET_KINDS.reduce((a, k) => a + k.weight, 0);
+
+    function pickTargetKind() {
+        let r = Math.random() * TARGET_TOTAL_WEIGHT;
+        for (const k of TARGET_KINDS) {
+            r -= k.weight;
+            if (r <= 0) return k;
+        }
+        return TARGET_KINDS[0];
+    }
+
+    // Power-up definitions
+    const POWERUP_TYPES = [
+        { type: 'time',  emoji: '⏰', desc: '+5秒' },
+        { type: 'triple',emoji: '🔥', desc: '三連発射!' },
+        { type: 'giant', emoji: '🥟', desc: '巨大餃子!' },
+        { type: 'fever', emoji: '⭐', desc: 'フィーバー!!' }
+    ];
 
     // Entities
     let projectiles = [];
     let targets = [];
     let particles = [];
+    let powerups = [];
+    let scorePopups = [];
+    let lanterns = [];
     let player = { x: 0, y: 0, size: 60 };
     let bossDialogue = null;
+    let powerupSpawnTimer = 0;
+    let shakeTime = 0;
 
     // Audio System
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    let soundOn = true;
 
-    function playSound(type) {
+    function toggleSound() {
+        soundOn = !soundOn;
+        document.getElementById('soundToggle').innerText = soundOn ? '🔊' : '🔇';
+        if (!soundOn) stopBGM();
+        else if (gameState === 'PLAYING') startBGM('main');
+        else if (gameState === 'BOSS_BATTLE') startBGM('boss');
+    }
+
+    function playSound(type, opts) {
+        if (!soundOn) return;
+        opts = opts || {};
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
@@ -410,13 +641,46 @@
                 oscillator.stop(audioContext.currentTime + 0.1);
                 break;
             case 'hit':
-                oscillator.frequency.value = 600;
+                // Pitch rises with the combo for a satisfying streak feel
+                oscillator.frequency.value = 600 + Math.min(20, opts.combo || 0) * 30;
                 oscillator.type = 'square';
                 gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.15);
                 break;
+            case 'bad':
+                oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.3);
+                oscillator.type = 'sawtooth';
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+                break;
+            case 'powerup':
+                oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.25);
+                oscillator.type = 'triangle';
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+                break;
+            case 'fever':
+                [523, 659, 784, 1047, 1319].forEach((freq, i) => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    osc.frequency.value = freq;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.12, audioContext.currentTime + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.08 + 0.25);
+                    osc.start(audioContext.currentTime + i * 0.08);
+                    osc.stop(audioContext.currentTime + i * 0.08 + 0.25);
+                });
+                return;
             case 'bossHit':
                 oscillator.frequency.value = 200;
                 oscillator.type = 'sawtooth';
@@ -466,13 +730,120 @@
         }
     }
 
+    // ---- Background Music (simple WebAudio sequencer) ----
+    const N = { C4:262, D4:294, E4:330, F4:349, G4:392, A4:440, B4:494,
+                C5:523, D5:587, E5:659, G5:784, A5:880,
+                C3:131, D3:147, E3:165, F3:175, G3:196, A3:220 };
+    const BGM_TRACKS = {
+        main: {
+            stepMs: 160,
+            melody: [N.E5, null, N.G5, N.E5, N.D5, null, N.C5, N.D5,
+                     N.E5, N.E5, N.G5, N.A5, N.G5, null, N.E5, null,
+                     N.D5, null, N.E5, N.D5, N.C5, null, N.A4, N.C5,
+                     N.D5, N.E5, N.C5, N.A4, N.G4, null, null, null],
+            bass:   [N.C3, null, N.G3, null, N.A3, null, N.E3, null]
+        },
+        boss: {
+            stepMs: 130,
+            melody: [N.A4, null, N.A4, N.C5, N.B4, null, N.A4, null,
+                     N.G4, null, N.G4, N.B4, N.A4, null, N.E4, null,
+                     N.A4, N.A4, N.C5, N.D5, N.E5, null, N.D5, N.C5,
+                     N.B4, null, N.E4, null, N.A4, null, null, null],
+            bass:   [N.A3, N.A3, N.E3, N.A3, N.G3, N.G3, N.D3, N.G3]
+        }
+    };
+    let bgmInterval = null;
+    let bgmStep = 0;
+
+    function startBGM(name) {
+        stopBGM();
+        if (!soundOn) return;
+        const track = BGM_TRACKS[name];
+        if (!track) return;
+        bgmStep = 0;
+        bgmInterval = setInterval(() => {
+            const t = audioContext.currentTime;
+            const mNote = track.melody[bgmStep % track.melody.length];
+            if (mNote) {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.type = 'triangle';
+                osc.frequency.value = mNote;
+                gain.gain.setValueAtTime(0.05, t);
+                gain.gain.exponentialRampToValueAtTime(0.005, t + track.stepMs / 1000 * 0.9);
+                osc.start(t);
+                osc.stop(t + track.stepMs / 1000);
+            }
+            if (bgmStep % 2 === 0) {
+                const bNote = track.bass[(bgmStep / 2) % track.bass.length];
+                if (bNote) {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    osc.type = 'square';
+                    osc.frequency.value = bNote;
+                    gain.gain.setValueAtTime(0.035, t);
+                    gain.gain.exponentialRampToValueAtTime(0.004, t + track.stepMs / 1000 * 1.8);
+                    osc.start(t);
+                    osc.stop(t + track.stepMs / 1000 * 2);
+                }
+            }
+            bgmStep++;
+        }, track.stepMs);
+    }
+
+    function stopBGM() {
+        if (bgmInterval) {
+            clearInterval(bgmInterval);
+            bgmInterval = null;
+        }
+    }
+
     function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         player.x = canvas.width / 2;
         player.y = canvas.height - 80;
+        initLanterns();
     }
     window.addEventListener('resize', resize);
+
+    // Drifting lanterns for a lively backdrop
+    function initLanterns() {
+        lanterns = [];
+        const count = Math.max(4, Math.floor(canvas.width / 200));
+        for (let i = 0; i < count; i++) {
+            lanterns.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                speed: Math.random() * 0.3 + 0.15,
+                sway: Math.random() * Math.PI * 2,
+                size: Math.random() * 20 + 24
+            });
+        }
+    }
+
+    function drawLanterns() {
+        ctx.save();
+        ctx.globalAlpha = 0.22;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (const l of lanterns) {
+            l.y += l.speed;
+            l.sway += 0.01;
+            if (l.y > canvas.height + 40) {
+                l.y = -40;
+                l.x = Math.random() * canvas.width;
+            }
+            ctx.font = `${l.size}px serif`;
+            ctx.fillText('🏮', l.x + Math.sin(l.sway) * 15, l.y);
+        }
+        ctx.restore();
+    }
+
     resize();
 
     // Input Handling
@@ -489,20 +860,139 @@
         throwGyoza(clickX, clickY);
     });
 
+    // Space key doubles as the dodge button
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && gameState === 'BOSS_BATTLE' &&
+            !document.getElementById('dodgeButton').classList.contains('hidden')) {
+            e.preventDefault();
+            attemptDodge();
+        }
+    });
+
     function throwGyoza(targetX, targetY) {
         const angle = Math.atan2(targetY - player.y, targetX - player.x);
         const speed = 15;
+        const giant = effects.giant > 0;
+        const angles = effects.triple > 0 ? [angle - 0.22, angle, angle + 0.22] : [angle];
 
-        projectiles.push({
-            x: player.x,
-            y: player.y - 20,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            rotation: 0,
-            active: true
-        });
+        for (const a of angles) {
+            projectiles.push({
+                x: player.x,
+                y: player.y - 20,
+                vx: Math.cos(a) * speed,
+                vy: Math.sin(a) * speed,
+                rotation: 0,
+                size: giant ? 64 : 30,
+                radius: giant ? 30 : 0,
+                active: true
+            });
+        }
 
+        throwsCount++;
         playSound('throw');
+    }
+
+    function spawnScorePopup(x, y, text, color) {
+        scorePopups.push({ x, y, text, color: color || '#D32F2F', life: 50 });
+    }
+
+    function comboMultiplier() {
+        const base = 1 + Math.min(3, Math.floor(combo / 8));
+        return base * (effects.fever > 0 ? 2 : 1);
+    }
+
+    function startFever(duration) {
+        const wasActive = effects.fever > 0;
+        effects.fever = Math.max(effects.fever, duration);
+        if (!wasActive) {
+            playSound('fever');
+            spawnScorePopup(canvas.width / 2, canvas.height / 3, '⭐ FEVER!! 得点2倍 ⭐', '#FF8F00');
+        }
+    }
+
+    function applyPowerup(pu) {
+        playSound('powerup');
+        switch (pu.type) {
+            case 'time':
+                if (gameState === 'BOSS_BATTLE') bossTimeLeft += 5;
+                else timeLeft += 5;
+                break;
+            case 'triple':
+                effects.triple = Math.max(effects.triple, 8);
+                break;
+            case 'giant':
+                effects.giant = Math.max(effects.giant, 8);
+                break;
+            case 'fever':
+                startFever(6);
+                break;
+        }
+        spawnScorePopup(pu.x, pu.y, `${pu.emoji} ${pu.desc}`, '#00838F');
+        for (let k = 0; k < 5; k++) particles.push(new Particle(pu.x, pu.y));
+    }
+
+    function spawnPowerup() {
+        const def = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+        const fromLeft = Math.random() < 0.5;
+        powerups.push({
+            type: def.type,
+            emoji: def.emoji,
+            desc: def.desc,
+            x: fromLeft ? -40 : canvas.width + 40,
+            y: Math.random() * canvas.height * 0.45 + 60,
+            vx: (fromLeft ? 1 : -1) * (Math.random() * 1.5 + 2),
+            bob: Math.random() * Math.PI * 2,
+            size: 40
+        });
+    }
+
+    function updatePowerups() {
+        for (let i = powerups.length - 1; i >= 0; i--) {
+            const pu = powerups[i];
+            pu.x += pu.vx;
+            pu.bob += 0.08;
+            if (pu.x < -60 || pu.x > canvas.width + 60) {
+                powerups.splice(i, 1);
+                continue;
+            }
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const y = pu.y + Math.sin(pu.bob) * 8;
+            // glow bubble
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = '#FFF176';
+            ctx.beginPath();
+            ctx.arc(pu.x, y, pu.size * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.font = `${pu.size}px serif`;
+            ctx.fillText(pu.emoji, pu.x, y);
+            ctx.restore();
+        }
+    }
+
+    function updateScorePopups() {
+        ctx.save();
+        ctx.textAlign = 'center';
+        for (let i = scorePopups.length - 1; i >= 0; i--) {
+            const s = scorePopups[i];
+            s.y -= 1.2;
+            s.life--;
+            if (s.life <= 0) {
+                scorePopups.splice(i, 1);
+                continue;
+            }
+            const fontSize = Math.min(canvas.width / 18, 30);
+            ctx.font = `bold ${fontSize}px serif`;
+            ctx.globalAlpha = Math.min(1, s.life / 20);
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 4;
+            ctx.fillStyle = s.color;
+            ctx.strokeText(s.text, s.x, s.y);
+            ctx.fillText(s.text, s.x, s.y);
+        }
+        ctx.restore();
     }
 
     class Target {
@@ -514,15 +1004,20 @@
         }
 
         reset() {
-            this.emoji = STAFF_EMOJIS[Math.floor(Math.random() * STAFF_EMOJIS.length)];
-            this.size = 50;
+            const kindDef = pickTargetKind();
+            this.kind = kindDef.kind;
+            this.points = kindDef.points;
+            this.emoji = kindDef.emoji || STAFF_EMOJIS[Math.floor(Math.random() * STAFF_EMOJIS.length)];
+            this.size = kindDef.size;
+            this.speedMul = kindDef.speedMul;
             this.x = Math.random() * (canvas.width - 100) + 50;
             this.y = -100; // Start above screen
             // Random movement patterns
-            this.vx = (Math.random() - 0.5) * 4 * difficultyMultiplier;
-            this.vy = (Math.random() * 2 + 1) * difficultyMultiplier; 
+            this.vx = (Math.random() - 0.5) * 4 * difficultyMultiplier * this.speedMul;
+            this.vy = (Math.random() * 2 + 1) * difficultyMultiplier * this.speedMul;
             this.state = 'active'; // active, hit
             this.hitTimer = 0;
+            this.hitEmoji = '😋';
             this.changeDirTimer = 0;
         }
 
@@ -539,7 +1034,7 @@
             // Change direction randomly
             this.changeDirTimer++;
             if (this.changeDirTimer > 60) {
-                this.vx = (Math.random() - 0.5) * 4 * difficultyMultiplier;
+                this.vx = (Math.random() - 0.5) * 4 * difficultyMultiplier * this.speedMul;
                 this.changeDirTimer = 0;
             }
 
@@ -556,15 +1051,34 @@
             ctx.font = `${this.size}px serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            
+
             if (this.state === 'hit') {
                 ctx.globalAlpha = this.hitTimer / 20;
-                ctx.fillText('😋', this.x, this.y);
+                ctx.fillText(this.hitEmoji, this.x, this.y);
                 ctx.globalAlpha = 1.0;
             } else {
-                // Flip sprite based on direction
                 ctx.save();
                 ctx.translate(this.x, this.y);
+                // Golden staff gets a shiny aura
+                if (this.kind === 'golden') {
+                    ctx.globalAlpha = 0.4;
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.75, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+                // Angry customers flash a warning ring: don't hit them!
+                if (this.kind === 'customer') {
+                    ctx.globalAlpha = 0.3;
+                    ctx.strokeStyle = '#FF0000';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.75, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+                // Flip sprite based on direction
                 if (this.vx < 0) ctx.scale(-1, 1);
                 ctx.fillText(this.emoji, 0, 0);
                 ctx.restore();
@@ -597,22 +1111,25 @@
 
     class Boss {
         constructor() {
+            const diff = DIFFICULTIES[currentDifficulty];
             this.x = canvas.width / 2;
             this.y = canvas.height / 3;
             this.size = 150;
-            this.hp = 50;
-            this.maxHP = 50;
+            this.hp = diff.bossHP;
+            this.maxHP = diff.bossHP;
             this.vx = 3;
             this.vy = 2;
             this.hitFlash = 0;
             this.attackTimer = 0;
             this.attackInterval = 200; // Attack every 3.3 seconds (at 60fps)
             this.chargeScale = 1;
+            this.enraged = false;
         }
 
         update() {
             // Move boss in a pattern (slower during charge)
-            const speedMult = bossAttack && bossAttack.currentTime < bossAttack.chargeTime ? 0.3 : 1;
+            const speedMult = (bossAttack && bossAttack.currentTime < bossAttack.chargeTime ? 0.3 : 1)
+                            * (this.enraged ? 1.5 : 1);
             this.x += this.vx * speedMult;
             this.y += this.vy * speedMult;
 
@@ -642,13 +1159,23 @@
             }
         }
 
+        enrage() {
+            this.enraged = true;
+            this.attackInterval = 130; // Attacks come faster
+            const phrase = BOSS_ENRAGE_PHRASES[Math.floor(Math.random() * BOSS_ENRAGE_PHRASES.length)];
+            spawnScorePopup(this.x, this.y - this.size / 2 - 40, phrase, '#FF1744');
+            playSound('warning');
+            shakeTime = 25;
+        }
+
         attack() {
-            // Create attack with charge phase
+            const enr = this.enraged;
+            // Create attack with charge phase (shorter windows when enraged)
             bossAttack = {
-                chargeTime: 90, // 1.5 second charge
-                dodgeWindowStart: 90,
-                dodgeWindowEnd: 150, // 1 second dodge window
-                totalTime: 180,
+                chargeTime: enr ? 70 : 90,
+                dodgeWindowStart: enr ? 70 : 90,
+                dodgeWindowEnd: enr ? 115 : 150,
+                totalTime: enr ? 145 : 180,
                 currentTime: 0,
                 dodged: false,
                 text: BOSS_PHRASES[Math.floor(Math.random() * BOSS_PHRASES.length)]
@@ -667,7 +1194,7 @@
             ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
             ctx.fillStyle = '#FF0000';
             ctx.fillRect(barX, barY, barWidth, barHeight);
-            ctx.fillStyle = '#00FF00';
+            ctx.fillStyle = this.enraged ? '#FF9100' : '#00FF00';
             ctx.fillRect(barX, barY, barWidth * (this.hp / this.maxHP), barHeight);
 
             // Draw boss image with charge effect
@@ -675,6 +1202,17 @@
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.scale(this.chargeScale, this.chargeScale);
+
+                // Enraged boss trembles with a red aura
+                if (this.enraged) {
+                    ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillStyle = '#FF1744';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.7, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
 
                 // Flash red during charge
                 if (bossAttack && bossAttack.currentTime < bossAttack.chargeTime) {
@@ -694,10 +1232,15 @@
             this.hp--;
             this.hitFlash = 5;
 
+            // Low HP: the boss loses its temper
+            if (!this.enraged && this.hp <= this.maxHP * 0.4 && this.hp > 0) {
+                this.enrage();
+            }
+
             // Show random boss phrase
             const phrase = BOSS_PHRASES[Math.floor(Math.random() * BOSS_PHRASES.length)];
             bossDialogue = {
-                text: phrase,
+                text: this.enraged ? phrase + '！！' : phrase,
                 x: this.x,
                 y: this.y - this.size / 2 - 30,
                 life: 60,
@@ -725,20 +1268,45 @@
         }
     }
 
+    function selectDifficulty(name) {
+        currentDifficulty = name;
+        document.getElementById('diffEasy').classList.toggle('selected', name === 'easy');
+        document.getElementById('diffNormal').classList.toggle('selected', name === 'normal');
+        document.getElementById('diffHard').classList.toggle('selected', name === 'hard');
+    }
+
+    function toggleStory(show) {
+        document.getElementById('storyScreen').classList.toggle('hidden', !show);
+        document.getElementById('startScreen').classList.toggle('hidden', show);
+    }
+
     function startGame() {
+        if (audioContext.state === 'suspended') audioContext.resume();
+
+        const diff = DIFFICULTIES[currentDifficulty];
         gameState = 'PLAYING';
         score = 0;
-        timeLeft = 60;
-        difficultyMultiplier = 1;
+        timeLeft = diff.time;
+        difficultyMultiplier = diff.speed;
         projectiles = [];
         particles = [];
         targets = [];
-        bossHP = 50;
-        bossTimeLeft = 45;
+        powerups = [];
+        scorePopups = [];
+        bossTimeLeft = diff.bossTime;
         warningTimer = 0;
         boss = null;
         playerHP = 3;
         bossAttack = null;
+        bossDialogue = null;
+        combo = 0;
+        comboTimer = 0;
+        maxCombo = 0;
+        throwsCount = 0;
+        hitsCount = 0;
+        effects = { triple: 0, giant: 0, fever: 0 };
+        powerupSpawnTimer = 5;
+        shakeTime = 0;
 
         // Create initial targets
         for(let i=0; i<3; i++) targets.push(new Target());
@@ -748,41 +1316,61 @@
         document.getElementById('gameOverScreen').classList.add('hidden');
         document.getElementById('bossVictoryScreen').classList.add('hidden');
         document.getElementById('warningScreen').classList.add('hidden');
+        document.getElementById('bossIntroScreen').classList.add('hidden');
         document.getElementById('dodgeButton').classList.add('hidden');
         document.getElementById('hud').classList.remove('hidden');
         document.getElementById('bossHud').classList.add('hidden');
 
         updateHUD();
+        startBGM('main');
         lastTime = performance.now();
         gameLoopId = requestAnimationFrame(gameLoop);
     }
 
     function resetGame() {
+        stopBGM();
         document.getElementById('resultScreen').classList.add('hidden');
         document.getElementById('gameOverScreen').classList.add('hidden');
         document.getElementById('bossVictoryScreen').classList.add('hidden');
         document.getElementById('warningScreen').classList.add('hidden');
+        document.getElementById('bossIntroScreen').classList.add('hidden');
         document.getElementById('dodgeButton').classList.add('hidden');
         document.getElementById('startScreen').classList.remove('hidden');
         document.getElementById('hud').classList.add('hidden');
         document.getElementById('bossHud').classList.add('hidden');
+        document.getElementById('highScoreDisp').innerText = highScore;
 
         // Quick render of background
         ctx.fillStyle = '#fdfbf7'; // Clear canvas
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
+    function updateHighScore() {
+        if (score > highScore) {
+            highScore = score;
+            saveHighScore(highScore);
+            return true;
+        }
+        return false;
+    }
+
     function endGame() {
         gameState = 'END';
         cancelAnimationFrame(gameLoopId);
-        
+        stopBGM();
+
         // Calculate Rank
         const rank = calculateRank(score);
-        
+        const isNewRecord = updateHighScore();
+
         document.getElementById('finalScore').innerText = score;
         document.getElementById('rankTitle').innerText = rank.title;
         document.getElementById('rankDesc').innerText = rank.desc;
-        
+        document.getElementById('newRecord').classList.toggle('hidden', !isNewRecord);
+        document.getElementById('statMaxCombo').innerText = maxCombo;
+        document.getElementById('statAccuracy').innerText = throwsCount > 0 ? Math.round(hitsCount / throwsCount * 100) : 0;
+        document.getElementById('statHighScore').innerText = highScore;
+
         document.getElementById('hud').classList.add('hidden');
         document.getElementById('resultScreen').classList.remove('hidden');
     }
@@ -795,18 +1383,70 @@
         if (s < 80) return { title: "1級：店長", desc: "この店は君に任せた！" };
         if (s < 100) return { title: "初段：餃子王", desc: "街で一番の餃子投げ。" };
         if (s < 130) return { title: "師範代", desc: "もはや投げる姿が見えない。" };
-        return { title: "免許皆伝：餃子神", desc: "餃子と一体化した存在。" };
+        if (s < 200) return { title: "免許皆伝：餃子神", desc: "餃子と一体化した存在。" };
+        if (s < 300) return { title: "餃子仙人", desc: "霞と餃子だけで生きられる。" };
+        return { title: "銀河餃子大帝", desc: "宇宙の餃子はすべてあなたのもの。" };
     }
 
     function updateHUD() {
         document.getElementById('score').innerText = score;
         document.getElementById('timer').innerText = Math.ceil(timeLeft);
+        document.getElementById('comboDisp').innerText = combo;
         if (boss) {
             document.getElementById('bossHP').innerText = boss.hp;
+            document.getElementById('bossMaxHP').innerText = boss.maxHP;
             document.getElementById('bossTimer').innerText = Math.ceil(bossTimeLeft);
             const hearts = '❤️'.repeat(playerHP) + '🖤'.repeat(3 - playerHP);
             document.getElementById('playerHP').innerText = hearts;
         }
+    }
+
+    // ---- Boss Intro (story cut-in) ----
+    const BOSS_INTRO_LINES = [
+        '「よくぞここまで来たな、餃子投男……」',
+        '「この店の餃子は今日からぜんぶわしのものだ。カレー味のロッカーにしまっておいたからな」',
+        '「お前の投げる餃子など、わしの胃袋には届かん！かかってくるがよい！」'
+    ];
+    let bossIntroIndex = 0;
+
+    function showBossIntro() {
+        gameState = 'BOSS_INTRO';
+        stopBGM();
+        bossIntroIndex = 0;
+        document.getElementById('warningScreen').classList.add('hidden');
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('bossIntroText').innerText = BOSS_INTRO_LINES[0];
+        document.getElementById('bossIntroBtn').innerText = '▶ 次へ';
+        document.getElementById('bossIntroScreen').classList.remove('hidden');
+        playSound('bossHit');
+    }
+
+    function advanceBossIntro() {
+        bossIntroIndex++;
+        if (bossIntroIndex < BOSS_INTRO_LINES.length) {
+            document.getElementById('bossIntroText').innerText = BOSS_INTRO_LINES[bossIntroIndex];
+            if (bossIntroIndex === BOSS_INTRO_LINES.length - 1) {
+                document.getElementById('bossIntroBtn').innerText = '⚔ 受けて立つ！';
+            }
+            playSound('bossHit');
+        } else {
+            beginBossBattle();
+        }
+    }
+
+    function beginBossBattle() {
+        gameState = 'BOSS_BATTLE';
+        boss = new Boss();
+        bossTimeLeft = DIFFICULTIES[currentDifficulty].bossTime;
+        targets = []; // Clear normal targets
+        projectiles = [];
+        powerups = [];
+        powerupSpawnTimer = 8;
+        document.getElementById('bossIntroScreen').classList.add('hidden');
+        document.getElementById('bossHud').classList.remove('hidden');
+        startBGM('boss');
+        lastTime = performance.now();
+        gameLoopId = requestAnimationFrame(gameLoop);
     }
 
     function attemptDodge() {
@@ -820,6 +1460,7 @@
             bossAttack.dodged = true;
             document.getElementById('dodgeButton').classList.add('hidden');
             playSound('hit'); // Success sound
+            spawnScorePopup(canvas.width / 2, canvas.height - 200, '回避成功！', '#00C853');
 
             // Visual feedback
             for(let i=0; i<10; i++) {
@@ -850,6 +1491,47 @@
         }
     }
 
+    function handleTargetHit(t, projectileIndex) {
+        t.state = 'hit';
+        t.hitTimer = 20;
+
+        if (t.points < 0) {
+            // Hit an angry customer: lose points, combo breaks!
+            t.hitEmoji = '💢';
+            score = Math.max(0, score + t.points);
+            combo = 0;
+            comboTimer = 0;
+            shakeTime = 15;
+            playSound('bad');
+            spawnScorePopup(t.x, t.y, `${t.points}皿… お客様!!`, '#B71C1C');
+        } else {
+            t.hitEmoji = '😋';
+            combo++;
+            comboTimer = COMBO_KEEP_TIME;
+            if (combo > maxCombo) maxCombo = combo;
+            hitsCount++;
+
+            const gained = t.points * comboMultiplier();
+            score += gained;
+            playSound('hit', { combo });
+
+            let popupText = `+${gained}皿`;
+            if (combo >= 5) popupText += ` (${combo}コンボ!)`;
+            spawnScorePopup(t.x, t.y, popupText, effects.fever > 0 ? '#FF8F00' : '#D32F2F');
+
+            // A blazing combo ignites fever mode
+            if (combo > 0 && combo % FEVER_COMBO === 0) {
+                startFever(5);
+            }
+
+            // Add hit effect
+            for(let k=0; k<3; k++) {
+                particles.push(new Particle(t.x, t.y));
+            }
+        }
+        projectiles.splice(projectileIndex, 1);
+    }
+
     function gameLoop(timestamp) {
         if (gameState !== 'PLAYING' && gameState !== 'WARNING' && gameState !== 'BOSS_BATTLE') return;
 
@@ -857,9 +1539,10 @@
         lastTime = timestamp;
 
         // Check if we need to trigger boss battle
-        if (gameState === 'PLAYING' && score >= 50) {
+        if (gameState === 'PLAYING' && score >= DIFFICULTIES[currentDifficulty].trigger) {
             gameState = 'WARNING';
             warningTimer = 3; // 3 seconds warning
+            stopBGM();
             document.getElementById('warningScreen').classList.remove('hidden');
             playSound('warning');
             lastTime = timestamp;
@@ -871,17 +1554,30 @@
         if (gameState === 'WARNING') {
             warningTimer -= deltaTime;
             if (warningTimer <= 0) {
-                gameState = 'BOSS_BATTLE';
-                boss = new Boss();
-                bossTimeLeft = 30;
-                targets = []; // Clear normal targets
-                projectiles = [];
-                document.getElementById('warningScreen').classList.add('hidden');
-                document.getElementById('hud').classList.add('hidden');
-                document.getElementById('bossHud').classList.remove('hidden');
+                // Story cut-in before the battle begins
+                showBossIntro();
+                return;
             }
             requestAnimationFrame(gameLoop);
             return;
+        }
+
+        // Tick down power-up effects
+        for (const key of Object.keys(effects)) {
+            if (effects[key] > 0) effects[key] = Math.max(0, effects[key] - deltaTime);
+        }
+
+        // Combo decay
+        if (comboTimer > 0) {
+            comboTimer -= deltaTime;
+            if (comboTimer <= 0) combo = 0;
+        }
+
+        // Power-up spawning (both phases)
+        powerupSpawnTimer -= deltaTime;
+        if (powerupSpawnTimer <= 0) {
+            spawnPowerup();
+            powerupSpawnTimer = Math.random() * 4 + (gameState === 'BOSS_BATTLE' ? 9 : 6);
         }
 
         // BOSS_BATTLE state
@@ -914,6 +1610,7 @@
                         // Player took damage
                         playerHP--;
                         playSound('explosion');
+                        shakeTime = 30;
 
                         // Screen shake effect
                         for(let i=0; i<20; i++) {
@@ -963,8 +1660,10 @@
             }
 
             // Increase difficulty over time (targets move faster, more targets appear)
-            difficultyMultiplier = 1 + (60 - timeLeft) / 30; // 1.0 -> 3.0 speed
-            if (targets.length < 3 + Math.floor((60 - timeLeft) / 15)) {
+            const diff = DIFFICULTIES[currentDifficulty];
+            const elapsed = diff.time - timeLeft;
+            difficultyMultiplier = diff.speed * (1 + elapsed / 30);
+            if (targets.length < Math.min(8, 3 + Math.floor(elapsed / 15))) {
                 targets.push(new Target());
             }
 
@@ -973,6 +1672,51 @@
 
         // Clear Canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Screen shake
+        ctx.save();
+        if (shakeTime > 0) {
+            shakeTime--;
+            const intensity = Math.min(10, shakeTime);
+            ctx.translate((Math.random() - 0.5) * intensity, (Math.random() - 0.5) * intensity);
+        }
+
+        // Backdrop: drifting lanterns
+        drawLanterns();
+
+        // Fever mode: golden glow over everything
+        if (effects.fever > 0) {
+            ctx.save();
+            ctx.globalAlpha = 0.12 + Math.sin(timestamp * 0.01) * 0.05;
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(-20, -20, canvas.width + 40, canvas.height + 40);
+            ctx.restore();
+
+            ctx.save();
+            const feverFont = Math.min(canvas.width / 12, 40);
+            ctx.font = `bold ${feverFont}px serif`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#FF8F00';
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 4;
+            ctx.globalAlpha = 0.85;
+            const feverText = `⭐ FEVER ${Math.ceil(effects.fever)} ⭐`;
+            ctx.strokeText(feverText, canvas.width / 2, feverFont * 2.2);
+            ctx.fillText(feverText, canvas.width / 2, feverFont * 2.2);
+            ctx.restore();
+        }
+
+        // Active effect badges above the player
+        if (effects.triple > 0 || effects.giant > 0) {
+            ctx.save();
+            ctx.font = '20px serif';
+            ctx.textAlign = 'center';
+            let badges = [];
+            if (effects.triple > 0) badges.push(`🔥${Math.ceil(effects.triple)}`);
+            if (effects.giant > 0) badges.push(`🥟${Math.ceil(effects.giant)}`);
+            ctx.fillText(badges.join(' '), player.x, player.y - 75);
+            ctx.restore();
+        }
 
         // Draw Player
         ctx.font = "60px serif";
@@ -987,11 +1731,18 @@
             p.y += p.vy;
             p.rotation += 0.2;
 
-            // Draw Gyoza
+            // Draw Gyoza (with a little motion trail)
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            ctx.font = `${Math.round(p.size * 0.7)}px serif`;
+            ctx.textBaseline = "middle";
+            ctx.fillText(GYOZA_EMOJI, p.x - p.vx * 0.8, p.y - p.vy * 0.8);
+            ctx.restore();
+
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rotation);
-            ctx.font = "30px serif";
+            ctx.font = `${p.size}px serif`;
             ctx.textBaseline = "middle";
             ctx.fillText(GYOZA_EMOJI, 0, 0);
             ctx.restore();
@@ -1002,6 +1753,22 @@
                 continue;
             }
 
+            // Power-up collection (hit the bubble with a gyoza)
+            let collected = false;
+            for (let j = powerups.length - 1; j >= 0; j--) {
+                const pu = powerups[j];
+                const dx = p.x - pu.x;
+                const dy = p.y - (pu.y + Math.sin(pu.bob) * 8);
+                if (Math.sqrt(dx*dx + dy*dy) < 35 + p.radius) {
+                    applyPowerup(pu);
+                    powerups.splice(j, 1);
+                    projectiles.splice(i, 1);
+                    collected = true;
+                    break;
+                }
+            }
+            if (collected) continue;
+
             // Collision Detection
             if (gameState === 'BOSS_BATTLE' && boss) {
                 // Boss collision
@@ -1009,10 +1776,15 @@
                 const dy = p.y - boss.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
 
-                if (dist < boss.size / 2) {
+                if (dist < boss.size / 2 + p.radius) {
                     const defeated = boss.hit();
                     projectiles.splice(i, 1);
                     playSound('bossHit');
+
+                    // Boss hits are worth bonus plates
+                    const gained = 2 * (effects.fever > 0 ? 2 : 1);
+                    score += gained;
+                    spawnScorePopup(boss.x, boss.y + boss.size / 2 + 20, `+${gained}皿`, '#7B1FA2');
 
                     // Add hit effect
                     for(let k=0; k<5; k++) {
@@ -1023,6 +1795,7 @@
                         // Boss defeated!
                         gameState = 'BOSS_VICTORY';
                         cancelAnimationFrame(gameLoopId);
+                        ctx.restore();
                         showBossVictory();
                         return;
                     }
@@ -1035,17 +1808,8 @@
                         const dy = p.y - t.y;
                         const dist = Math.sqrt(dx*dx + dy*dy);
 
-                        if (dist < 40) { // Hit!
-                            t.state = 'hit';
-                            t.hitTimer = 20;
-                            score++;
-                            projectiles.splice(i, 1);
-                            playSound('hit');
-
-                            // Add hit effect
-                            for(let k=0; k<3; k++) {
-                                particles.push(new Particle(t.x, t.y));
-                            }
+                        if (dist < 40 + p.radius) { // Hit!
+                            handleTargetHit(t, i);
                             break; // One gyoza hits one target
                         }
                     }
@@ -1065,6 +1829,9 @@
             });
         }
 
+        // Update & Draw Power-ups
+        updatePowerups();
+
         // Update & Draw Particles
         for (let i = particles.length - 1; i >= 0; i--) {
             let p = particles[i];
@@ -1072,6 +1839,9 @@
             p.draw();
             if (p.life <= 0) particles.splice(i, 1);
         }
+
+        // Update & Draw Score Popups
+        updateScorePopups();
 
         // Update & Draw Boss Dialogue
         if (bossDialogue) {
@@ -1147,10 +1917,13 @@
             }
         }
 
+        ctx.restore(); // end screen shake
+
         requestAnimationFrame(gameLoop);
     }
 
     function showExplosionAndGameOver() {
+        stopBGM();
         playSound('explosion');
 
         // Create explosion effect
@@ -1197,8 +1970,10 @@
             if (explosionFrames > 0) {
                 requestAnimationFrame(explosionLoop);
             } else {
+                updateHighScore();
                 document.getElementById('gameOverScore').innerText = score;
                 document.getElementById('bossHud').classList.add('hidden');
+                document.getElementById('dodgeButton').classList.add('hidden');
                 document.getElementById('gameOverScreen').classList.remove('hidden');
             }
         };
@@ -1206,9 +1981,14 @@
     }
 
     function showBossVictory() {
+        stopBGM();
         playSound('victory');
+        updateHighScore();
         document.getElementById('victoryScore').innerText = score;
+        document.getElementById('victoryMaxCombo').innerText = maxCombo;
+        document.getElementById('victoryAccuracy').innerText = throwsCount > 0 ? Math.round(hitsCount / throwsCount * 100) : 0;
         document.getElementById('bossHud').classList.add('hidden');
+        document.getElementById('dodgeButton').classList.add('hidden');
         document.getElementById('bossVictoryScreen').classList.remove('hidden');
     }
 
@@ -1217,6 +1997,7 @@
     ctx.font = "30px serif";
     ctx.textAlign = "center";
     ctx.fillText("Loading...", canvas.width/2, canvas.height/2);
+    document.getElementById('highScoreDisp').innerText = highScore;
 
 </script>
 </body>
