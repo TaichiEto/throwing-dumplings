@@ -466,7 +466,7 @@
 ——だがその夜、店の奥から不気味な声が響く。
 「この店の餃子、ぜんぶわしのものだ……」
 
-街はずれには悪人どもの巣窟もあるという。
+街はずれには、謎のあちみ用語——「悪質」「それオンセー」「che」——で話す悪人どもの巣窟もあるという。
 餃子の未来は、客席のお前の右腕にかかっている!</p>
             <button class="btn" onclick="toggleStory(false)">戻る</button>
         </div>
@@ -534,7 +534,7 @@
             <h2 class="text-5xl mb-4" style="color: #FF0000;">💥 GAME OVER 💥</h2>
             <p class="text-2xl mb-2">餃子投男は倒れた……</p>
             <p id="gameOverStory" class="story-text">投気楼は「謎の存在」の手に落ちた。
-店の餃子はすべてカレー味に変えられてしまったという……
+店の餃子はすべてカレー味のロッカーへ——「誰の仕業？」と問う者は、もういない。
 
 だが、餃子投男の魂は不滅。
 立ち上がれ、再び餃子を握るのだ！</p>
@@ -549,12 +549,14 @@
         <div class="retro-box">
             <h2 class="text-5xl mb-4" style="color: #FFD700;">🏆 ボス撃破！ 🏆</h2>
             <p class="text-2xl mb-2">見事、謎の存在を倒した！</p>
-            <p class="story-text">「ぐぬぬ……この餃子、うますぎる……」
+            <p class="story-text">「ぐぬぬ……この餃子、うますぎる……それオンセー……」
 
 謎の存在は餃子の美味しさに心を打たれ、光となって消えていった。
-投気楼に平和が戻り、餃子投男の名は伝説として語り継がれることとなった。
+カレー味のロッカーに隠されていた餃子も、無事すべて店に戻った。
+投気楼に平和が戻り、餃子投男の名は「真の能力者」として語り継がれることとなった。
 
-——後日、店の隅で餃子を頬張る謎の常連客の姿があったという。</p>
+——後日、店の隅で餃子を頬張る謎の常連客の姿があったという。
+「吉岡太一は気遣いができる」と、その客は満足げに呟いた。</p>
             <p class="text-xl mb-2">最終スコア: <span id="victoryScore">0</span> 皿</p>
             <div id="campaignVictoryExtra" class="hidden">
                 <p class="text-xl mb-2" style="color:#FFD700; animation: pulse 0.6s ease-in-out infinite;">🎊 全ステージ制覇！ 🎊</p>
@@ -629,13 +631,13 @@
         { id: 'sonic',     title: 'STAGE 4『音速餃子』',
           story: '奴は速い！ならばこっちは音速だ！\n坂を駆け抜け、バネ🌀で跳び、⚡で加速。💣にだけは気をつけろ！' },
         { id: 'akunin',    title: 'STAGE 5『悪人の集まる所』',
-          story: '手がかりを求めて悪人の巣窟へ。\n悪人どもを餃子で退治し、中ボスを倒して謎の存在の居場所を聞き出せ！一般人🙍は巻き込むな！' },
+          story: '手がかりを求めて悪人の巣窟へ。\n奴らは謎のあちみ用語で話すという——「悪質」「che」「誰の仕業？」「川勝婚活メンチカツ」……\n悪人どもを餃子で退治し、中ボスを倒して謎の存在の居場所を聞き出せ！一般人🙍は巻き込むな！' },
         { id: 'shooting',  title: 'STAGE 6『餃子空中戦』',
           story: '空から謎の存在の手下が大群で襲来！\n指をスライドして機体を動かせ。餃子は自動連射だ。25体撃ち落とせ！' },
         { id: 'pachinko',  title: 'STAGE 7『歓楽街の大勝負』',
           story: '決戦の前に、歓楽街でひと勝負。ボーナスステージだ！\nタップで玉を放ち、中央の🎯で大当たりを狙え！' },
         { id: 'finalboss', title: 'FINAL『決戦！謎の存在』',
-          story: 'ついに追い詰めた！奪われた餃子を取り戻す時だ。\n全ステージで磨いた腕を、この一戦にぶつけろ！！' }
+          story: 'ついに追い詰めた！カレー味のロッカーに隠された餃子を取り戻す時だ。\n「死んだんじゃないの〜？」——嘲る声に、餃子で応えろ。\n全ステージで磨いた腕を、この一戦にぶつけろ！！それオンセー！！' }
     ];
     let campaign = null; // { index, totalScore } while story mode is running
 
@@ -694,6 +696,33 @@
         'あとデカイのは俺の拳だ！'
     ];
 
+    // ---- あちみ用語 ----
+    // 悪人たち(そしてこの世界の住人)はあちみ用語で話す
+    const ACHIMI_FIXED = [
+        '悪質',
+        'それオンセー',
+        '誰の仕業？',
+        '能力者',
+        'che',
+        '川勝婚活メンチカツ',
+        '吉岡太一',
+        'あとデカイのは腹か',
+        'パンパンクロール',
+        'カレー味のロッカー',
+        '偽物のシャカシャカ',
+        '死んだんじゃないの〜？'
+    ];
+    const ACHIMI_SHINAIDE = ['ネギル', 'シャカシャカ', 'パンパン', 'オンセー', 'メンチ', 'クロール', '婚活', 'ギョーザ'];
+    const ACHIMI_NAMES = ['吉岡太一', '川勝', '餃子投男', 'メンチカツ', 'オンセー', 'パンクロ', 'シャカシャカ', 'ロッカー'];
+
+    function achimiPhrase() {
+        const r = Math.random();
+        if (r < 0.55) return ACHIMI_FIXED[Math.floor(Math.random() * ACHIMI_FIXED.length)];
+        if (r < 0.75) return ACHIMI_SHINAIDE[Math.floor(Math.random() * ACHIMI_SHINAIDE.length)] + 'しないで';
+        if (r < 0.9) return ACHIMI_NAMES[Math.floor(Math.random() * ACHIMI_NAMES.length)] + 'は気遣いができる';
+        return BOSS_PHRASES[Math.floor(Math.random() * BOSS_PHRASES.length)];
+    }
+
     // Target kinds: weighted variety of staff
     const TARGET_KINDS = [
         { kind: 'staff',    points: 1,  speedMul: 1.0, size: 50, weight: 62 },
@@ -709,7 +738,7 @@
         { kind: 'cat',      emoji: '🐱', points: 2,  speedMul: 1.5, size: 44, weight: 12 },
         { kind: 'ninja',    emoji: '🥷', points: 3,  speedMul: 1.9, size: 46, weight: 10 },
         { kind: 'golden',   emoji: '🤴', points: 5,  speedMul: 2.2, size: 48, weight: 4 },
-        { kind: 'customer', emoji: '😡', points: -8, speedMul: 0.8, size: 78, weight: 28, penaltyText: 'デカ客に当てた!!' }
+        { kind: 'customer', emoji: '😡', points: -8, speedMul: 0.8, size: 78, weight: 28, penaltyText: 'デカ客に当てた!! 悪質!!' }
     ];
 
     // 「悪人の集まる所」: villains are fair game, don't hit the bystanders
@@ -718,7 +747,7 @@
         { kind: 'vampire',  emoji: '🧛', points: 2,  speedMul: 1.5, size: 48, weight: 22 },
         { kind: 'tengu',    emoji: '👺', points: 3,  speedMul: 1.9, size: 46, weight: 16 },
         { kind: 'skeleton', emoji: '💀', points: 5,  speedMul: 2.3, size: 44, weight: 6 },
-        { kind: 'civilian', emoji: '🙍', points: -5, speedMul: 1.0, size: 50, weight: 16, penaltyText: '一般人を巻き込んだ!!' }
+        { kind: 'civilian', emoji: '🙍', points: -5, speedMul: 1.0, size: 50, weight: 16, penaltyText: '一般人を巻き込んだ！悪質！' }
     ];
 
     function activeKindSet() {
@@ -757,6 +786,7 @@
     let bossDialogue = null;
     let powerupSpawnTimer = 0;
     let shakeTime = 0;
+    let achimiTalkTimer = 2;
 
     // Audio System
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1119,7 +1149,7 @@
         effects.fever = Math.max(effects.fever, duration);
         if (!wasActive) {
             playSound('fever');
-            spawnScorePopup(canvas.width / 2, canvas.height / 3, '⭐ FEVER!! 得点2倍 ⭐', '#FF8F00');
+            spawnScorePopup(canvas.width / 2, canvas.height / 3, '⭐ FEVER!! それオンセー!! ⭐', '#FF8F00');
         }
     }
 
@@ -1395,7 +1425,7 @@
                 totalTime: enr ? 145 : 180,
                 currentTime: 0,
                 dodged: false,
-                text: (this.isMidboss ? MIDBOSS_PHRASES : BOSS_PHRASES)[Math.floor(Math.random() * (this.isMidboss ? MIDBOSS_PHRASES : BOSS_PHRASES).length)]
+                text: achimiPhrase()
             };
             playSound('warning');
         }
@@ -1461,9 +1491,10 @@
                 this.enrage();
             }
 
-            // Show random boss phrase
-            const pool = this.isMidboss ? MIDBOSS_PHRASES : BOSS_PHRASES;
-            const phrase = pool[Math.floor(Math.random() * pool.length)];
+            // Bosses speak achimi-go too
+            const phrase = Math.random() < 0.3
+                ? (this.isMidboss ? MIDBOSS_PHRASES : BOSS_PHRASES)[Math.floor(Math.random() * (this.isMidboss ? MIDBOSS_PHRASES : BOSS_PHRASES).length)]
+                : achimiPhrase();
             bossDialogue = {
                 text: this.enraged ? phrase + '！！' : phrase,
                 x: this.x,
@@ -1506,7 +1537,7 @@
     }
 
     const BOSS_GAMEOVER_STORY = `投気楼は「謎の存在」の手に落ちた。
-店の餃子はすべてカレー味に変えられてしまったという……
+店の餃子はすべてカレー味のロッカーへ——「誰の仕業？」と問う者は、もういない。
 
 だが、餃子投男の魂は不滅。
 立ち上がれ、再び餃子を握るのだ！`;
@@ -1572,7 +1603,7 @@
         nextMidbossScore = currentMode === 'akunin' ? Math.round(diff.trigger / 2) : Infinity;
         pendingMidboss = false;
         document.getElementById('gameOverStory').innerText = currentMode === 'akunin'
-            ? '悪人どもの巣窟で、餃子投男は力尽きた……。\nだが街の平和のため、彼はまた餃子を手に取るだろう。'
+            ? '悪人どもの巣窟で、餃子投男は力尽きた……。\n「悪質」「誰の仕業？」「che」——嘲笑う声が響く。\nだが街の平和のため、彼はまた餃子を手に取るだろう。'
             : BOSS_GAMEOVER_STORY;
 
         // Campaign stage tuning (shorter rounds, fixed midboss timing)
@@ -1605,6 +1636,7 @@
         effects = { triple: 0, giant: 0, fever: 0 };
         powerupSpawnTimer = 5;
         shakeTime = 0;
+        achimiTalkTimer = 2;
 
         // Create initial targets
         for(let i=0; i<3; i++) targets.push(new Target());
@@ -1705,9 +1737,9 @@
 
     // ---- Boss Intro (story cut-in) ----
     const BOSS_INTRO_LINES = [
-        '「よくぞここまで来たな、餃子投男……」',
+        '「よくぞここまで来たな、餃子投男……。ほう、お前も能力者か？」',
         '「この店の餃子は今日からぜんぶわしのものだ。カレー味のロッカーにしまっておいたからな」',
-        '「お前の投げる餃子など、わしの胃袋には届かん！かかってくるがよい！」'
+        '「お前の投げる餃子など、偽物のシャカシャカにすぎん！かかってくるがよい！パンパンクロール！！」'
     ];
     let bossIntroIndex = 0;
 
@@ -1802,7 +1834,8 @@
             bossAttack.dodged = true;
             document.getElementById('dodgeButton').classList.add('hidden');
             playSound('hit'); // Success sound
-            spawnScorePopup(canvas.width / 2, canvas.height - 200, '回避成功！', '#00C853');
+            const dodgeCry = ['回避成功！', '偽物のシャカシャカ！', 'それオンセー回避！', 'さすが能力者！'];
+            spawnScorePopup(canvas.width / 2, canvas.height - 200, dodgeCry[Math.floor(Math.random() * dodgeCry.length)], '#00C853');
 
             // Visual feedback
             for(let i=0; i<10; i++) {
@@ -1846,6 +1879,7 @@
             shakeTime = 15;
             playSound('bad');
             spawnScorePopup(t.x, t.y, `${t.points}皿… ${t.penaltyText || 'お客様!!'}`, '#B71C1C');
+            if (Math.random() < 0.7) spawnScorePopup(t.x, t.y - t.size - 25, '「悪質」', '#6A1B9A');
         } else {
             t.hitEmoji = '😋';
             combo++;
@@ -1860,6 +1894,11 @@
             let popupText = `+${gained}皿`;
             if (combo >= 5) popupText += ` (${combo}コンボ!)`;
             spawnScorePopup(t.x, t.y, popupText, effects.fever > 0 ? '#FF8F00' : '#D32F2F');
+
+            // Villains cry out in achimi-go when hit
+            if (currentMode === 'akunin' && Math.random() < 0.5) {
+                spawnScorePopup(t.x, t.y - t.size - 25, `「${achimiPhrase()}」`, '#6A1B9A');
+            }
 
             // A blazing combo ignites fever mode
             if (combo > 0 && combo % FEVER_COMBO === 0) {
@@ -2029,6 +2068,21 @@
             difficultyMultiplier = diff.speed * (1 + elapsed / 30);
             if (targets.length < Math.min(8, 3 + Math.floor(elapsed / 15))) {
                 targets.push(new Target());
+            }
+
+            // Villains & giant customers chatter in achimi-go
+            if (currentMode === 'akunin' || currentMode === 'dekai') {
+                achimiTalkTimer -= deltaTime;
+                if (achimiTalkTimer <= 0) {
+                    achimiTalkTimer = 2.5 + Math.random() * 2.5;
+                    const talkers = targets.filter(t => t.state === 'active' &&
+                        (currentMode === 'akunin' || t.kind === 'customer') &&
+                        t.y > 40 && t.y < canvas.height - 120);
+                    if (talkers.length) {
+                        const t = talkers[Math.floor(Math.random() * talkers.length)];
+                        spawnScorePopup(t.x, t.y - t.size, `「${achimiPhrase()}」`, '#6A1B9A');
+                    }
+                }
             }
 
             updateHUD();
@@ -2581,13 +2635,14 @@
                         e.alive = false; s.vy = -12; score += 3;
                         playSound('hit', { combo: 5 });
                         spawnScorePopup(130, s.py - 40, '踏んづけた！ +3皿', '#2E7D32');
+                        spawnScorePopup(130, s.py - 80, '「che」', '#6A1B9A');
                         stageBurst(130, s.py, '💫', 4);
                     } else if (s.inv <= 0) {
                         s.hearts--; s.inv = 100; s.vy = -9;
                         playSound('bad');
                         spawnScorePopup(130, s.py - 40, '😡に激突！ ❤−1', '#B71C1C');
                         if (s.hearts <= 0) {
-                            stageFail('怒れるお客様に捕まってしまった……。\n「あとデカイのは、俺の怒りだ」');
+                            stageFail('怒れるお客様に捕まってしまった……。\n「あとデカイのは腹か」と、客は腹をさすりながら去っていった。');
                             return;
                         }
                     }
@@ -2788,8 +2843,9 @@
                             playSound('explosion');
                             stageBurst(150, s.py - 20, '🥟', lost);
                             spawnScorePopup(150, s.py - 90, `💥 餃子が${lost}個散らばった！`, '#B71C1C');
+                            spawnScorePopup(150, s.py - 130, '「誰の仕業？」', '#6A1B9A');
                         } else {
-                            stageFail('餃子を一つも持たずに爆弾を踏んでしまった……。\n音速の旅は、ここで終わった。');
+                            stageFail('餃子を一つも持たずに爆弾を踏んでしまった……。\n「che」——音速の旅は、ここで終わった。');
                             return;
                         }
                     }
@@ -2964,6 +3020,7 @@
                         s.jackpots++;
                         playSound('fever');
                         stageBurst(b.x, canvas.height - 160, '🎉', 10);
+                        spawnScorePopup(canvas.width / 2, canvas.height / 2, 'パンパンクロール！！', '#FFD700');
                         shakeTime = 20;
                     } else {
                         playSound('hit');
@@ -3093,7 +3150,7 @@
                 shakeTime = 15;
                 stageBurst(s.px, pyy, '💥', 5);
                 if (s.hearts <= 0) {
-                    stageFail('カレー弾の雨に沈んだ……。\n空はまだ、謎の存在のものだ。');
+                    stageFail('カレー弾の雨に沈んだ……。\n「死んだんじゃないの〜？」——空はまだ、謎の存在のものだ。');
                 }
             };
 
@@ -3135,6 +3192,9 @@
                             playSound('hit', { combo: s.kills });
                             stageBurst(e.x, e.y, '💥', 3);
                             spawnScorePopup(e.x, e.y, `+${e.pts}皿`, '#FFD54F');
+                            if (Math.random() < 0.35) {
+                                spawnScorePopup(e.x, e.y - 40, `「${achimiPhrase()}」`, '#CE93D8');
+                            }
                         } else {
                             playSound('peg');
                         }
