@@ -410,8 +410,6 @@
             <h1 class="text-4xl mb-2">🥟 餃子投げ検定 🥟</h1>
             <p class="text-lg mb-2">〜提供された餃子は、投げ返す〜</p>
             <p class="text-sm mb-2">親指ひとつで遊べる餃子アクション!<br>タップで発射・ジャンプ・玉打ち</p>
-            <p class="text-sm mb-1" style="color:#FFD54F;">🏆 検定ハイスコア: <span id="highScoreDisp">0</span> 皿</p>
-
             <p class="text-sm mb-1">難易度をえらぶ</p>
             <div class="mb-2">
                 <button id="diffEasy" class="btn btn-diff" onclick="selectDifficulty('easy')">見習い</button>
@@ -419,7 +417,10 @@
                 <button id="diffHard" class="btn btn-diff" onclick="selectDifficulty('hard')">鬼</button>
             </div>
 
-            <p class="text-sm mb-1">モードをえらぶ</p>
+            <button class="btn" style="display:block;margin:8px auto 2px;font-size:clamp(1rem,4.5vw,1.3rem);" onclick="startCampaign()">🎮 ストーリーモードで冒険に出る</button>
+            <p class="text-xs mb-2" style="color:#FFD54F;">全7ステージ+最終ボス ／ 最高記録: <span id="campaignHSDisp">0</span> 皿</p>
+
+            <p class="text-sm mb-1">フリープレイ（1ステージだけ遊ぶ）　🏆検定: <span id="highScoreDisp" style="color:#FFD54F;">0</span> 皿</p>
             <div class="mode-grid">
                 <button class="btn mode-btn" onclick="startMode('kentei')">🥟 検定モード<small>王道。謎の存在を倒せ</small></button>
                 <button class="btn mode-btn" onclick="startMode('dekai')">🍽️ あとデカイのは客か<small>1.5倍の巨大客に注意</small></button>
@@ -427,6 +428,7 @@
                 <button class="btn mode-btn" onclick="startMode('mario')">🍄 餃子大冒険<small>タップでジャンプ!</small></button>
                 <button class="btn mode-btn" onclick="startMode('sonic')">💨 音速餃子<small>爽快ハイスピード</small></button>
                 <button class="btn mode-btn" onclick="startMode('pachinko')">🎰 大当たり餃子玉<small>タップで玉を放て</small></button>
+                <button class="btn mode-btn" onclick="startMode('shooting')">🛸 餃子シューティング<small>スライドで移動&自動連射</small></button>
             </div>
 
             <div class="item-legend">
@@ -467,6 +469,16 @@
 街はずれには悪人どもの巣窟もあるという。
 餃子の未来は、客席のお前の右腕にかかっている!</p>
             <button class="btn" onclick="toggleStory(false)">戻る</button>
+        </div>
+    </div>
+
+    <!-- Campaign Stage Intro Screen -->
+    <div id="stageIntroScreen" class="ui-layer interactive hidden" style="background: rgba(0,0,0,0.85);">
+        <div class="retro-box">
+            <p id="stageIntroClear" class="text-xl mb-2" style="color:#FFD54F;"></p>
+            <h2 id="stageIntroTitle" class="text-3xl mb-2">STAGE 1</h2>
+            <p id="stageIntroStory" class="story-text"></p>
+            <button class="btn" onclick="launchCampaignStage()">▶ 出発！</button>
         </div>
     </div>
 
@@ -527,7 +539,8 @@
 だが、餃子投男の魂は不滅。
 立ち上がれ、再び餃子を握るのだ！</p>
             <p class="text-xl mb-2">到達スコア: <span id="gameOverScore">0</span> 皿</p>
-            <button class="btn" onclick="resetGame()">再挑戦</button>
+            <button id="campaignRetryBtn" class="btn hidden" onclick="retryCampaignStage()">🔄 このステージからやり直す</button>
+            <button class="btn btn-sub" onclick="resetGame()">タイトルへ</button>
         </div>
     </div>
 
@@ -543,6 +556,13 @@
 
 ——後日、店の隅で餃子を頬張る謎の常連客の姿があったという。</p>
             <p class="text-xl mb-2">最終スコア: <span id="victoryScore">0</span> 皿</p>
+            <div id="campaignVictoryExtra" class="hidden">
+                <p class="text-xl mb-2" style="color:#FFD700; animation: pulse 0.6s ease-in-out infinite;">🎊 全ステージ制覇！ 🎊</p>
+                <div class="bg-white text-red-800 p-4 rounded mb-2">
+                    <p class="text-sm">冒険の総合段位</p>
+                    <h3 class="text-4xl font-bold" id="campaignRank">餃子神</h3>
+                </div>
+            </div>
             <div class="item-legend" style="grid-template-columns: 1fr;">
                 <div>🔥 最大コンボ: <span id="victoryMaxCombo">0</span></div>
                 <div>🎯 命中率: <span id="victoryAccuracy">0</span>%</div>
@@ -590,11 +610,34 @@
         akunin: '悪人の集まる所',
         mario: '餃子大冒険',
         sonic: '音速餃子',
-        pachinko: '大当たり餃子玉'
+        pachinko: '大当たり餃子玉',
+        shooting: '餃子シューティング'
     };
     let currentMode = 'kentei';
     let nextMidbossScore = Infinity;
     let pendingMidboss = false;
+    let roundTime = 60; // length of the current throwing round (for difficulty ramp)
+
+    // Campaign (story mode): play every stage in order, then face the final boss
+    const CAMPAIGN_STAGES = [
+        { id: 'kentei',    title: 'STAGE 1『投気楼の夜』',
+          story: 'いつものように客席から餃子を投げていた餃子投男。だがその夜、「謎の存在」が現れ、店の餃子を根こそぎ奪っていった！\nまずは腕慣らしだ。30秒で店員たちに餃子を届けろ！' },
+        { id: 'dekai',     title: 'STAGE 2『あとデカイのは客か』',
+          story: '謎の存在の妖気で、お客様が1.5倍にデカくなってしまった！\nデカ客に当てるな。店員だけを狙い撃て！' },
+        { id: 'mario',     title: 'STAGE 3『餃子大冒険』',
+          story: '謎の存在は街の外へ逃げていく。追いかけろ！\nタップでジャンプ（2段まで）。穴を越え、餃子を拾い、怒れる客は上から踏め！' },
+        { id: 'sonic',     title: 'STAGE 4『音速餃子』',
+          story: '奴は速い！ならばこっちは音速だ！\n坂を駆け抜け、バネ🌀で跳び、⚡で加速。💣にだけは気をつけろ！' },
+        { id: 'akunin',    title: 'STAGE 5『悪人の集まる所』',
+          story: '手がかりを求めて悪人の巣窟へ。\n悪人どもを餃子で退治し、中ボスを倒して謎の存在の居場所を聞き出せ！一般人🙍は巻き込むな！' },
+        { id: 'shooting',  title: 'STAGE 6『餃子空中戦』',
+          story: '空から謎の存在の手下が大群で襲来！\n指をスライドして機体を動かせ。餃子は自動連射だ。25体撃ち落とせ！' },
+        { id: 'pachinko',  title: 'STAGE 7『歓楽街の大勝負』',
+          story: '決戦の前に、歓楽街でひと勝負。ボーナスステージだ！\nタップで玉を放ち、中央の🎯で大当たりを狙え！' },
+        { id: 'finalboss', title: 'FINAL『決戦！謎の存在』',
+          story: 'ついに追い詰めた！奪われた餃子を取り戻す時だ。\n全ステージで磨いた腕を、この一戦にぶつけろ！！' }
+    ];
+    let campaign = null; // { index, totalScore } while story mode is running
 
     // Combo & Stats
     let combo = 0;
@@ -994,20 +1037,37 @@
 
     resize();
 
-    // Input Handling
+    // Input Handling (one thumb: tap, or hold & slide in the shooting stage)
+    let stagePointerHeld = false;
+
     canvas.addEventListener('pointerdown', (e) => {
-        if (gameState === 'STAGE') { stageTap(); return; }
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        if (gameState === 'STAGE') {
+            stagePointerHeld = true;
+            stageTap(clickX, clickY);
+            return;
+        }
         if (gameState !== 'PLAYING' && gameState !== 'BOSS_BATTLE') return;
 
         // Don't throw gyoza during dodge window
         if (bossAttack && bossAttack.currentTime >= bossAttack.chargeTime) return;
 
-        const rect = canvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
-
         throwGyoza(clickX, clickY);
     });
+
+    canvas.addEventListener('pointermove', (e) => {
+        if (!stagePointerHeld) return;
+        if (gameState === 'STAGE' && stage && stage.move) {
+            const rect = canvas.getBoundingClientRect();
+            stage.move(e.clientX - rect.left);
+        }
+    });
+
+    window.addEventListener('pointerup', () => { stagePointerHeld = false; });
+    window.addEventListener('pointercancel', () => { stagePointerHeld = false; });
 
     // Space key doubles as the dodge button (or jump/launch in stages)
     window.addEventListener('keydown', (e) => {
@@ -1453,11 +1513,55 @@
 
     function startMode(mode) {
         currentMode = mode;
-        if (mode === 'mario' || mode === 'sonic' || mode === 'pachinko') {
+        if (mode === 'mario' || mode === 'sonic' || mode === 'pachinko' || mode === 'shooting') {
             startStage(mode);
         } else {
             startGame();
         }
+    }
+
+    // ---------------- Campaign (story mode) flow ----------------
+    function startCampaign() {
+        campaign = { index: 0, totalScore: 0 };
+        showStageIntro(false);
+    }
+
+    function showStageIntro(cleared) {
+        gameState = 'CAMPAIGN_INTRO';
+        cancelAnimationFrame(gameLoopId);
+        stopBGM();
+        hideAllScreens();
+        const st = CAMPAIGN_STAGES[campaign.index];
+        document.getElementById('stageIntroClear').innerText =
+            cleared ? `✅ ステージクリア！ +${score}皿（累計 ${campaign.totalScore}皿）` : '';
+        document.getElementById('stageIntroTitle').innerText = st.title;
+        document.getElementById('stageIntroStory').innerText = st.story;
+        document.getElementById('stageIntroScreen').classList.remove('hidden');
+    }
+
+    function launchCampaignStage() {
+        const id = CAMPAIGN_STAGES[campaign.index].id;
+        document.getElementById('stageIntroScreen').classList.add('hidden');
+        if (id === 'mario' || id === 'sonic' || id === 'pachinko' || id === 'shooting') {
+            currentMode = id;
+            startStage(id);
+        } else if (id === 'finalboss') {
+            currentMode = 'kentei';
+            startGame(); // trigger fires immediately on this stage
+        } else {
+            currentMode = id;
+            startGame();
+        }
+    }
+
+    function retryCampaignStage() {
+        showStageIntro(false);
+    }
+
+    function campaignStageDone() {
+        campaign.totalScore += score;
+        campaign.index++;
+        showStageIntro(true);
     }
 
     function startGame() {
@@ -1470,8 +1574,17 @@
         document.getElementById('gameOverStory').innerText = currentMode === 'akunin'
             ? '悪人どもの巣窟で、餃子投男は力尽きた……。\nだが街の平和のため、彼はまた餃子を手に取るだろう。'
             : BOSS_GAMEOVER_STORY;
+
+        // Campaign stage tuning (shorter rounds, fixed midboss timing)
+        let campaignTime = null;
+        if (campaign) {
+            const cid = CAMPAIGN_STAGES[campaign.index].id;
+            if (cid === 'kentei' || cid === 'dekai') campaignTime = 30;
+            if (cid === 'akunin') { campaignTime = 45; nextMidbossScore = 25; }
+        }
         score = 0;
-        timeLeft = diff.time;
+        timeLeft = campaignTime !== null ? campaignTime : diff.time;
+        roundTime = timeLeft;
         difficultyMultiplier = diff.speed;
         projectiles = [];
         particles = [];
@@ -1507,7 +1620,8 @@
 
     function hideAllScreens() {
         ['startScreen','resultScreen','gameOverScreen','bossVictoryScreen','warningScreen',
-         'bossIntroScreen','dodgeButton','hud','bossHud','stageHud','stageClearScreen','storyScreen']
+         'bossIntroScreen','dodgeButton','hud','bossHud','stageHud','stageClearScreen','storyScreen',
+         'stageIntroScreen']
             .forEach(id => document.getElementById(id).classList.add('hidden'));
     }
 
@@ -1515,9 +1629,11 @@
         stopBGM();
         gameState = 'START';
         stage = null;
+        campaign = null;
         hideAllScreens();
         document.getElementById('startScreen').classList.remove('hidden');
         document.getElementById('highScoreDisp').innerText = getHS('kentei');
+        document.getElementById('campaignHSDisp').innerText = getHS('campaign');
 
         // Quick render of background
         ctx.fillStyle = '#fdfbf7'; // Clear canvas
@@ -1531,6 +1647,14 @@
     }
 
     function endGame() {
+        if (campaign) {
+            // Timed campaign stage finished: bank the score and move on
+            cancelAnimationFrame(gameLoopId);
+            stopBGM();
+            playSound('victory');
+            campaignStageDone();
+            return;
+        }
         gameState = 'END';
         cancelAnimationFrame(gameLoopId);
         stopBGM();
@@ -1637,6 +1761,17 @@
     }
 
     function midbossDefeated() {
+        if (campaign) {
+            // Campaign STAGE 5 goal reached: midboss down = stage clear
+            playSound('victory');
+            score += 20;
+            cancelAnimationFrame(gameLoopId);
+            stopBGM();
+            boss = null;
+            bossAttack = null;
+            campaignStageDone();
+            return;
+        }
         playSound('victory');
         score += 20;
         timeLeft += 10;
@@ -1745,8 +1880,12 @@
         const deltaTime = (timestamp - lastTime) / 1000;
         lastTime = timestamp;
 
-        // Check if we need to trigger a boss battle (final boss in kentei, midboss in akunin)
-        if (gameState === 'PLAYING' && currentMode === 'kentei' && score >= DIFFICULTIES[currentDifficulty].trigger) {
+        // Check if we need to trigger a boss battle (final boss in kentei, midboss in akunin).
+        // In the campaign the final boss fires immediately on its own stage and never during STAGE 1.
+        const bossTrigger = campaign
+            ? (CAMPAIGN_STAGES[campaign.index].id === 'finalboss' ? 0 : Infinity)
+            : DIFFICULTIES[currentDifficulty].trigger;
+        if (gameState === 'PLAYING' && currentMode === 'kentei' && score >= bossTrigger) {
             gameState = 'WARNING';
             warningTimer = 3; // 3 seconds warning
             pendingMidboss = false;
@@ -1886,7 +2025,7 @@
 
             // Increase difficulty over time (targets move faster, more targets appear)
             const diff = DIFFICULTIES[currentDifficulty];
-            const elapsed = diff.time - timeLeft;
+            const elapsed = roundTime - timeLeft;
             difficultyMultiplier = diff.speed * (1 + elapsed / 30);
             if (targets.length < Math.min(8, 3 + Math.floor(elapsed / 15))) {
                 targets.push(new Target());
@@ -2204,7 +2343,9 @@
                 document.getElementById('gameOverScore').innerText = score;
                 document.getElementById('bossHud').classList.add('hidden');
                 document.getElementById('stageHud').classList.add('hidden');
+                document.getElementById('hud').classList.add('hidden');
                 document.getElementById('dodgeButton').classList.add('hidden');
+                document.getElementById('campaignRetryBtn').classList.toggle('hidden', !campaign);
                 document.getElementById('gameOverScreen').classList.remove('hidden');
             }
         };
@@ -2214,8 +2355,19 @@
     function showBossVictory() {
         stopBGM();
         playSound('victory');
-        updateHighScore();
-        document.getElementById('victoryScore').innerText = score;
+        if (campaign) {
+            // Story mode complete!
+            campaign.totalScore += score;
+            const rank = calculateRank(campaign.totalScore);
+            updateModeHS('campaign', campaign.totalScore);
+            document.getElementById('victoryScore').innerText = campaign.totalScore;
+            document.getElementById('campaignRank').innerText = rank.title;
+            document.getElementById('campaignVictoryExtra').classList.remove('hidden');
+        } else {
+            updateHighScore();
+            document.getElementById('victoryScore').innerText = score;
+            document.getElementById('campaignVictoryExtra').classList.add('hidden');
+        }
         document.getElementById('victoryMaxCombo').innerText = maxCombo;
         document.getElementById('victoryAccuracy').innerText = throwsCount > 0 ? Math.round(hitsCount / throwsCount * 100) : 0;
         document.getElementById('bossHud').classList.add('hidden');
@@ -2240,8 +2392,9 @@
         document.getElementById('stageHud').classList.remove('hidden');
         if (mode === 'mario') stage = buildMario();
         else if (mode === 'sonic') stage = buildSonic();
+        else if (mode === 'shooting') stage = buildShooting();
         else stage = buildPachinko();
-        startBGM(mode === 'sonic' ? 'sonic' : 'main');
+        startBGM(mode === 'sonic' || mode === 'shooting' ? 'sonic' : 'main');
         lastTime = performance.now();
         gameLoopId = requestAnimationFrame(stageLoop);
     }
@@ -2271,6 +2424,13 @@
     }
 
     function stageClear(detail) {
+        if (campaign) {
+            cancelAnimationFrame(gameLoopId);
+            stopBGM();
+            playSound('victory');
+            campaignStageDone();
+            return;
+        }
         gameState = 'STAGE_CLEAR';
         cancelAnimationFrame(gameLoopId);
         stopBGM();
@@ -2316,7 +2476,7 @@
     // ---------------- Mario-style: 餃子大冒険 ----------------
     function buildMario() {
         const diff = DIFFICULTIES[currentDifficulty];
-        const L = 5200;
+        const L = campaign ? 3400 : 5200;
         const s = {
             mode: 'mario', camX: 0, speed: 4.3 * diff.speed, hearts: 3, inv: 0, coins: 0,
             py: null, prevPy: 0, vy: 0, jumps: 0, length: L,
@@ -2539,7 +2699,7 @@
     // ---------------- Sonic-style: 音速餃子 ----------------
     function buildSonic() {
         const diff = DIFFICULTIES[currentDifficulty];
-        const L = 9000;
+        const L = campaign ? 6000 : 9000;
         const s = {
             mode: 'sonic', camX: 0, speed: 8 * diff.speed, baseMax: 17 * diff.speed, boost: 0,
             gyoza: 0, inv: 0, airborne: false, vy: 0, py: null, rot: 0, jumps: 0, length: L,
@@ -2730,7 +2890,7 @@
     function buildPachinko() {
         const ballCounts = { easy: 15, normal: 12, hard: 9 };
         const s = {
-            mode: 'pachinko', ballsLeft: ballCounts[currentDifficulty], active: [],
+            mode: 'pachinko', ballsLeft: campaign ? 8 : ballCounts[currentDifficulty], active: [],
             pegs: [], fever: 0, jackpots: 0, done: false, t: 0, sweepX: 0,
             pocketVals: [5, 15, 77, 15, 5]
         };
@@ -2795,7 +2955,7 @@
                     const zone = Math.min(4, Math.max(0, Math.floor(b.x / canvas.width * 5)));
                     const jackpot = zone === 2;
                     let gain = s.pocketVals[zone];
-                    if (s.fever > 0) gain *= 2;
+                    if (s.fever > 0 && !jackpot) gain *= 2; // 確変 doubles the side pockets only
                     score += gain;
                     spawnScorePopup(b.x, canvas.height - 130, `+${gain}皿${jackpot ? ' 🎉大当たり!!' : ''}`,
                         jackpot ? '#FF8F00' : '#FFD54F');
@@ -2889,12 +3049,205 @@
         return s;
     }
 
+    // ---------------- Shooting-style: 餃子シューティング ----------------
+    // Hold & slide your thumb to move; gyoza fire automatically.
+    function buildShooting() {
+        const diff = DIFFICULTIES[currentDifficulty];
+        const s = {
+            mode: 'shooting', px: canvas.width / 2, targetX: canvas.width / 2,
+            hearts: 3, inv: 0, kills: 0, need: 25, t: 0, fireT: 0, spawnT: 40,
+            enemies: [], shots: [], bullets: [], stars: []
+        };
+        for (let i = 0; i < 40; i++) {
+            s.stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                sp: Math.random() * 2 + 1,
+                r: Math.random() * 1.5 + 0.5
+            });
+        }
+        const E_TYPES = [
+            { emoji: '🦇', hp: 1, vy: 1.6, pts: 2 },
+            { emoji: '🛸', hp: 2, vy: 1.1, pts: 4 },
+            { emoji: '👿', hp: 1, vy: 2.2, pts: 3 }
+        ];
+
+        s.tap = (x) => { if (x !== undefined) s.targetX = x; };
+        s.move = (x) => { s.targetX = x; };
+        s.hudText = () =>
+            '❤️'.repeat(s.hearts) + '🖤'.repeat(Math.max(0, 3 - s.hearts)) +
+            `  撃墜:${s.kills}/${s.need}  得点:${score}皿`;
+
+        s.update = () => {
+            s.t++;
+            const W = canvas.width, H = canvas.height;
+            const pyy = H - 130;
+            s.px += (s.targetX - s.px) * 0.22;
+            s.px = Math.max(30, Math.min(W - 30, s.px));
+            if (s.inv > 0) s.inv--;
+
+            const hurt = () => {
+                s.hearts--;
+                s.inv = 100;
+                playSound('explosion');
+                shakeTime = 15;
+                stageBurst(s.px, pyy, '💥', 5);
+                if (s.hearts <= 0) {
+                    stageFail('カレー弾の雨に沈んだ……。\n空はまだ、謎の存在のものだ。');
+                }
+            };
+
+            // Auto-fire gyoza
+            s.fireT++;
+            if (s.fireT >= 9) {
+                s.fireT = 0;
+                s.shots.push({ x: s.px, y: pyy - 40 });
+            }
+
+            // Enemy spawning ramps up as you rack up kills
+            s.spawnT--;
+            if (s.spawnT <= 0) {
+                const et = E_TYPES[Math.floor(Math.random() * E_TYPES.length)];
+                s.enemies.push({
+                    emoji: et.emoji, hp: et.hp, pts: et.pts,
+                    x: 40 + Math.random() * (W - 80), y: -40,
+                    vy: et.vy * diff.speed,
+                    drift: Math.random() * Math.PI * 2,
+                    shootT: 60 + Math.random() * 120
+                });
+                s.spawnT = Math.max(18, 46 - s.kills);
+            }
+
+            // Player shots
+            for (let i = s.shots.length - 1; i >= 0; i--) {
+                const sh = s.shots[i];
+                sh.y -= 13;
+                if (sh.y < -30) { s.shots.splice(i, 1); continue; }
+                for (let j = s.enemies.length - 1; j >= 0; j--) {
+                    const e = s.enemies[j];
+                    if (Math.hypot(e.x - sh.x, e.y - sh.y) < 32) {
+                        e.hp--;
+                        s.shots.splice(i, 1);
+                        if (e.hp <= 0) {
+                            s.enemies.splice(j, 1);
+                            s.kills++;
+                            score += e.pts;
+                            playSound('hit', { combo: s.kills });
+                            stageBurst(e.x, e.y, '💥', 3);
+                            spawnScorePopup(e.x, e.y, `+${e.pts}皿`, '#FFD54F');
+                        } else {
+                            playSound('peg');
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Enemies: drift down, occasionally lob curry bombs at you
+            for (let i = s.enemies.length - 1; i >= 0; i--) {
+                const e = s.enemies[i];
+                e.y += e.vy;
+                e.drift += 0.04;
+                e.x += Math.sin(e.drift) * 1.5;
+                e.shootT--;
+                if (e.shootT <= 0) {
+                    e.shootT = 110 + Math.random() * 80;
+                    const dx = s.px - e.x, dy = pyy - e.y;
+                    const d = Math.hypot(dx, dy) || 1;
+                    s.bullets.push({ x: e.x, y: e.y, vx: dx / d * 3, vy: Math.max(2, dy / d * 3.2) });
+                }
+                if (e.y > H + 40) { s.enemies.splice(i, 1); continue; }
+                if (s.inv <= 0 && Math.hypot(e.x - s.px, e.y - pyy) < 38) {
+                    s.enemies.splice(i, 1);
+                    hurt();
+                    if (gameState !== 'STAGE') return;
+                }
+            }
+
+            // Enemy bullets
+            for (let i = s.bullets.length - 1; i >= 0; i--) {
+                const b = s.bullets[i];
+                b.x += b.vx;
+                b.y += b.vy;
+                if (b.y > H + 30 || b.x < -30 || b.x > W + 30) { s.bullets.splice(i, 1); continue; }
+                if (s.inv <= 0 && Math.hypot(b.x - s.px, b.y - pyy) < 26) {
+                    s.bullets.splice(i, 1);
+                    hurt();
+                    if (gameState !== 'STAGE') return;
+                }
+            }
+
+            if (s.kills >= s.need) {
+                const bonus = s.hearts * 5;
+                score += bonus;
+                stageClear(`撃墜数: ${s.kills} ／ 残り❤ボーナス: +${bonus}皿`);
+            }
+        };
+
+        s.draw = () => {
+            const W = canvas.width, H = canvas.height;
+            const pyy = H - 130;
+            ctx.clearRect(0, 0, W, H);
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, '#0a0a2e');
+            grad.addColorStop(1, '#2d1b4e');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Scrolling stars
+            ctx.fillStyle = '#fff';
+            for (const st of s.stars) {
+                st.y += st.sp;
+                if (st.y > H) { st.y = -4; st.x = Math.random() * W; }
+                ctx.globalAlpha = 0.7;
+                ctx.beginPath();
+                ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // Player shots
+            ctx.font = '20px serif';
+            for (const sh of s.shots) ctx.fillText('🥟', sh.x, sh.y);
+
+            // Enemies
+            ctx.font = '36px serif';
+            for (const e of s.enemies) ctx.fillText(e.emoji, e.x, e.y);
+
+            // Enemy bullets (curry!)
+            ctx.font = '22px serif';
+            for (const b of s.bullets) ctx.fillText('🍛', b.x, b.y);
+
+            // Player ship (tilts as it moves, blinks while invincible)
+            if (s.inv <= 0 || s.inv % 10 < 5) {
+                ctx.save();
+                ctx.translate(s.px, pyy);
+                ctx.rotate((s.targetX - s.px) * 0.002);
+                ctx.font = '46px serif';
+                ctx.fillText(PLAYER_EMOJI, 0, 0);
+                ctx.font = '20px serif';
+                ctx.fillText('🔥', 0, 34);
+                ctx.restore();
+            }
+
+            // Kill progress bar
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.fillRect(W * 0.2, 14, W * 0.6, 8);
+            ctx.fillStyle = '#FBC02D';
+            ctx.fillRect(W * 0.2, 14, W * 0.6 * Math.min(1, s.kills / s.need), 8);
+        };
+        return s;
+    }
+
     // Initial Draw
     ctx.fillStyle = '#fdfbf7';
     ctx.font = "30px serif";
     ctx.textAlign = "center";
     ctx.fillText("Loading...", canvas.width/2, canvas.height/2);
     document.getElementById('highScoreDisp').innerText = highScore;
+    document.getElementById('campaignHSDisp').innerText = getHS('campaign');
 
 </script>
 </body>
