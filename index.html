@@ -205,6 +205,29 @@
             pointer-events: auto;
         }
 
+        .mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            max-width: 480px;
+            margin: 0 auto 8px;
+        }
+
+        .mode-btn {
+            margin: 0;
+            font-size: clamp(0.75rem, 3vw, 1rem);
+            padding: 8px 6px;
+            border-radius: 12px;
+            line-height: 1.3;
+        }
+
+        .mode-btn small {
+            display: block;
+            font-size: 0.68em;
+            font-weight: normal;
+            opacity: 0.8;
+        }
+
         .item-legend {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -361,6 +384,11 @@
         <div>HP: <span id="playerHP">❤️❤️❤️</span></div>
     </div>
 
+    <!-- Stage HUD (Mario / Sonic / Pachinko) -->
+    <div id="stageHud" class="hud hidden" style="justify-content:center;">
+        <div id="stageHudText"></div>
+    </div>
+
     <!-- Sound Toggle -->
     <button id="soundToggle" class="sound-btn" onclick="toggleSound()">🔊</button>
 
@@ -380,20 +408,9 @@
     <div id="startScreen" class="ui-layer interactive">
         <div class="retro-box floating">
             <h1 class="text-4xl mb-2">🥟 餃子投げ検定 🥟</h1>
-            <p class="text-lg mb-2">〜目指せ、餃子名人〜</p>
-            <p class="text-sm mb-2">動く店員さんに餃子を投げつけろ！<br>クリック/タップで発射</p>
-            <p class="text-sm mb-1" style="color:#FFD54F;">🏆 ハイスコア: <span id="highScoreDisp">0</span> 皿</p>
-
-            <div class="item-legend">
-                <div>🥷 忍者店員 … 3皿</div>
-                <div>🐱 猫店員 … 2皿</div>
-                <div>🤴 王様店員 … 5皿</div>
-                <div>😡 お客様 … <span style="color:#FF8A80;">−5皿!</span></div>
-                <div>⏰ 時間+5秒</div>
-                <div>🔥 三連発射</div>
-                <div>🥟 巨大餃子</div>
-                <div>⭐ フィーバー!</div>
-            </div>
+            <p class="text-lg mb-2">〜提供された餃子は、投げ返す〜</p>
+            <p class="text-sm mb-2">親指ひとつで遊べる餃子アクション!<br>タップで発射・ジャンプ・玉打ち</p>
+            <p class="text-sm mb-1" style="color:#FFD54F;">🏆 検定ハイスコア: <span id="highScoreDisp">0</span> 皿</p>
 
             <p class="text-sm mb-1">難易度をえらぶ</p>
             <div class="mb-2">
@@ -402,8 +419,28 @@
                 <button id="diffHard" class="btn btn-diff" onclick="selectDifficulty('hard')">鬼</button>
             </div>
 
+            <p class="text-sm mb-1">モードをえらぶ</p>
+            <div class="mode-grid">
+                <button class="btn mode-btn" onclick="startMode('kentei')">🥟 検定モード<small>王道。謎の存在を倒せ</small></button>
+                <button class="btn mode-btn" onclick="startMode('dekai')">🍽️ あとデカイのは客か<small>1.5倍の巨大客に注意</small></button>
+                <button class="btn mode-btn" onclick="startMode('akunin')">🦹 悪人の集まる所<small>中ボス悪人と戦え</small></button>
+                <button class="btn mode-btn" onclick="startMode('mario')">🍄 餃子大冒険<small>タップでジャンプ!</small></button>
+                <button class="btn mode-btn" onclick="startMode('sonic')">💨 音速餃子<small>爽快ハイスピード</small></button>
+                <button class="btn mode-btn" onclick="startMode('pachinko')">🎰 大当たり餃子玉<small>タップで玉を放て</small></button>
+            </div>
+
+            <div class="item-legend">
+                <div>🥷 忍者店員 … 3皿</div>
+                <div>🐱 猫店員 … 2皿</div>
+                <div>🤴 王様店員 … 5皿</div>
+                <div>😡 お客様 … <span style="color:#FF8A80;">当てるな!</span></div>
+                <div>⏰ 時間+5秒</div>
+                <div>🔥 三連発射</div>
+                <div>🥟 巨大餃子</div>
+                <div>⭐ フィーバー!</div>
+            </div>
+
             <div>
-                <button class="btn" onclick="startGame()">試験開始</button>
                 <button class="btn btn-sub" onclick="toggleStory(true)">📖 物語</button>
             </div>
         </div>
@@ -415,15 +452,20 @@
             <h2 class="text-3xl mb-2">📖 プロローグ 📖</h2>
             <p class="story-text">昔々、餃子の聖地として栄えた中華街に「投気楼(とうきろう)」という伝説の名店があった。
 
-その店に伝わる究極の給仕術——それが「餃子投げ」。焼きたての餃子を宙に舞わせ、店員が華麗にキャッチして客に届ける神業である。
+ある日、その店にふらりと現れた一人の客——餃子投男(ぎょうざ なげお)。
+彼は運ばれてきた餃子を、食べない。投げるのだ。
 
-主人公・餃子投男(ぎょうざ なげお)は、名人の座を懸けた「餃子投げ検定試験」に挑もうとしていた。
+「うまい餃子は、投げてこそ輝く」
 
-しかしその夜、店の奥から不気味な声が響く……
+最初は困惑していた店員たちも、いつしか宙を舞う餃子を華麗にキャッチする芸を磨き上げ、それは店の名物「餃子投げ」となった。客が投げ、店員が受ける——奇妙で美しい検定試験の誕生である。
+
+今日も餃子投男は客席につく。テーブルには焼きたての餃子。店員たちは身構える。
+
+——だがその夜、店の奥から不気味な声が響く。
 「この店の餃子、ぜんぶわしのものだ……」
 
-検定の裏で蠢く「謎の存在」。
-餃子投男よ、餃子の未来はお前の右腕にかかっている！</p>
+街はずれには悪人どもの巣窟もあるという。
+餃子の未来は、客席のお前の右腕にかかっている!</p>
             <button class="btn" onclick="toggleStory(false)">戻る</button>
         </div>
     </div>
@@ -438,10 +480,22 @@
         </div>
     </div>
 
+    <!-- Stage Clear Screen -->
+    <div id="stageClearScreen" class="ui-layer interactive hidden">
+        <div class="retro-box">
+            <h2 id="stageClearTitle" class="text-3xl mb-2">🎉 クリア！ 🎉</h2>
+            <p class="text-xl mb-2">スコア</p>
+            <p class="text-5xl font-bold mb-2 text-yellow-300"><span id="stageClearScore">0</span> 皿</p>
+            <p id="stageClearDetail" class="text-sm mb-2"></p>
+            <p class="text-sm mb-2" style="color:#FFD54F;">🏆 このモードのベスト: <span id="stageClearBest">0</span> 皿</p>
+            <button class="btn" onclick="resetGame()">モード選択へ</button>
+        </div>
+    </div>
+
     <!-- Result Screen -->
     <div id="resultScreen" class="ui-layer interactive hidden">
         <div class="retro-box">
-            <h2 class="text-3xl mb-2">試験終了！</h2>
+            <h2 id="resultTitle" class="text-3xl mb-2">試験終了！</h2>
             <p class="text-xl mb-2">あなたのスコア</p>
             <p class="text-5xl font-bold mb-2 text-yellow-300"><span id="finalScore">0</span> 皿</p>
             <p id="newRecord" class="text-xl mb-2 hidden" style="color:#FFD700; animation: pulse 0.5s ease-in-out infinite;">✨ 新記録!! ✨</p>
@@ -467,7 +521,7 @@
         <div class="retro-box">
             <h2 class="text-5xl mb-4" style="color: #FF0000;">💥 GAME OVER 💥</h2>
             <p class="text-2xl mb-2">餃子投男は倒れた……</p>
-            <p class="story-text">投気楼は「謎の存在」の手に落ちた。
+            <p id="gameOverStory" class="story-text">投気楼は「謎の存在」の手に落ちた。
 店の餃子はすべてカレー味に変えられてしまったという……
 
 だが、餃子投男の魂は不滅。
@@ -529,6 +583,19 @@
     };
     let currentDifficulty = 'normal';
 
+    // Game Modes
+    const MODE_NAMES = {
+        kentei: '検定モード',
+        dekai: 'あとデカイのは客か',
+        akunin: '悪人の集まる所',
+        mario: '餃子大冒険',
+        sonic: '音速餃子',
+        pachinko: '大当たり餃子玉'
+    };
+    let currentMode = 'kentei';
+    let nextMidbossScore = Infinity;
+    let pendingMidboss = false;
+
     // Combo & Stats
     let combo = 0;
     let comboTimer = 0;
@@ -541,15 +608,20 @@
     // Active power-up effects (remaining seconds)
     let effects = { triple: 0, giant: 0, fever: 0 };
 
-    // High Score (persisted)
-    function loadHighScore() {
-        try { return parseInt(localStorage.getItem('gyoza_highscore') || '0', 10) || 0; }
+    // High Scores (persisted per mode; kentei keeps the legacy key)
+    function hsKey(mode) { return mode === 'kentei' ? 'gyoza_highscore' : 'gyoza_hs_' + mode; }
+    function getHS(mode) {
+        try { return parseInt(localStorage.getItem(hsKey(mode)) || '0', 10) || 0; }
         catch(e) { return 0; }
     }
-    function saveHighScore(s) {
-        try { localStorage.setItem('gyoza_highscore', String(s)); } catch(e) {}
+    function updateModeHS(mode, s) {
+        if (s > getHS(mode)) {
+            try { localStorage.setItem(hsKey(mode), String(s)); } catch(e) {}
+            return true;
+        }
+        return false;
     }
-    let highScore = loadHighScore();
+    let highScore = getHS('kentei');
 
     // Assets (Using Emojis)
     const PLAYER_EMOJI = '🤵'; // The Gyoza Thrower
@@ -570,6 +642,14 @@
         'わしの真の力を見よ！！',
         '餃子ごときがぁ！！'
     ];
+    const MIDBOSS_EMOJIS = ['🦹‍♂️', '🧟', '👹'];
+    const MIDBOSS_PHRASES = [
+        'ここは悪人の縄張りだ！',
+        '餃子など効かぬわ！',
+        '客のくせに生意気な！',
+        '出ていきな！',
+        'あとデカイのは俺の拳だ！'
+    ];
 
     // Target kinds: weighted variety of staff
     const TARGET_KINDS = [
@@ -577,17 +657,42 @@
         { kind: 'cat',      emoji: '🐱', points: 2,  speedMul: 1.5, size: 44, weight: 14 },
         { kind: 'ninja',    emoji: '🥷', points: 3,  speedMul: 1.9, size: 46, weight: 12 },
         { kind: 'golden',   emoji: '🤴', points: 5,  speedMul: 2.2, size: 48, weight: 5 },
-        { kind: 'customer', emoji: '😡', points: -5, speedMul: 0.9, size: 52, weight: 7 }
+        { kind: 'customer', emoji: '😡', points: -5, speedMul: 0.9, size: 52, weight: 7, penaltyText: 'お客様!!' }
     ];
-    const TARGET_TOTAL_WEIGHT = TARGET_KINDS.reduce((a, k) => a + k.weight, 0);
+
+    // 「あとデカイのは客か」: customers are 1.5x bigger, more frequent, and hurt more
+    const DEKAI_KINDS = [
+        { kind: 'staff',    points: 1,  speedMul: 1.0, size: 50, weight: 46 },
+        { kind: 'cat',      emoji: '🐱', points: 2,  speedMul: 1.5, size: 44, weight: 12 },
+        { kind: 'ninja',    emoji: '🥷', points: 3,  speedMul: 1.9, size: 46, weight: 10 },
+        { kind: 'golden',   emoji: '🤴', points: 5,  speedMul: 2.2, size: 48, weight: 4 },
+        { kind: 'customer', emoji: '😡', points: -8, speedMul: 0.8, size: 78, weight: 28, penaltyText: 'デカ客に当てた!!' }
+    ];
+
+    // 「悪人の集まる所」: villains are fair game, don't hit the bystanders
+    const AKUNIN_KINDS = [
+        { kind: 'thug',     emoji: '🦹', points: 1,  speedMul: 1.1, size: 52, weight: 40 },
+        { kind: 'vampire',  emoji: '🧛', points: 2,  speedMul: 1.5, size: 48, weight: 22 },
+        { kind: 'tengu',    emoji: '👺', points: 3,  speedMul: 1.9, size: 46, weight: 16 },
+        { kind: 'skeleton', emoji: '💀', points: 5,  speedMul: 2.3, size: 44, weight: 6 },
+        { kind: 'civilian', emoji: '🙍', points: -5, speedMul: 1.0, size: 50, weight: 16, penaltyText: '一般人を巻き込んだ!!' }
+    ];
+
+    function activeKindSet() {
+        if (currentMode === 'dekai') return DEKAI_KINDS;
+        if (currentMode === 'akunin') return AKUNIN_KINDS;
+        return TARGET_KINDS;
+    }
 
     function pickTargetKind() {
-        let r = Math.random() * TARGET_TOTAL_WEIGHT;
-        for (const k of TARGET_KINDS) {
+        const set = activeKindSet();
+        const total = set.reduce((a, k) => a + k.weight, 0);
+        let r = Math.random() * total;
+        for (const k of set) {
             r -= k.weight;
             if (r <= 0) return k;
         }
-        return TARGET_KINDS[0];
+        return set[0];
     }
 
     // Power-up definitions
@@ -667,6 +772,41 @@
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.3);
                 break;
+            case 'jump':
+                oscillator.frequency.setValueAtTime(250, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(550, audioContext.currentTime + 0.12);
+                oscillator.type = 'triangle';
+                gainNode.gain.setValueAtTime(0.12, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.14);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.14);
+                break;
+            case 'coin':
+                oscillator.frequency.setValueAtTime(988, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(1319, audioContext.currentTime + 0.06);
+                oscillator.type = 'square';
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.16);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.16);
+                break;
+            case 'spring':
+                oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(1000, audioContext.currentTime + 0.2);
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.25);
+                break;
+            case 'peg':
+                oscillator.frequency.value = 1500;
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.005, audioContext.currentTime + 0.04);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.04);
+                break;
             case 'fever':
                 [523, 659, 784, 1047, 1319].forEach((freq, i) => {
                     const osc = audioContext.createOscillator();
@@ -742,6 +882,14 @@
                      N.D5, null, N.E5, N.D5, N.C5, null, N.A4, N.C5,
                      N.D5, N.E5, N.C5, N.A4, N.G4, null, null, null],
             bass:   [N.C3, null, N.G3, null, N.A3, null, N.E3, null]
+        },
+        sonic: {
+            stepMs: 112,
+            melody: [N.C5, N.D5, N.E5, N.G5, N.E5, N.G5, N.A5, null,
+                     N.G5, N.E5, N.D5, N.C5, N.D5, N.E5, N.D5, null,
+                     N.C5, N.D5, N.E5, N.G5, N.A5, N.G5, N.E5, N.D5,
+                     N.E5, null, N.G5, null, N.C5, null, null, null],
+            bass:   [N.C3, N.G3, N.C3, N.G3, N.F3, N.C3, N.G3, N.G3]
         },
         boss: {
             stepMs: 130,
@@ -848,6 +996,7 @@
 
     // Input Handling
     canvas.addEventListener('pointerdown', (e) => {
+        if (gameState === 'STAGE') { stageTap(); return; }
         if (gameState !== 'PLAYING' && gameState !== 'BOSS_BATTLE') return;
 
         // Don't throw gyoza during dodge window
@@ -860,12 +1009,16 @@
         throwGyoza(clickX, clickY);
     });
 
-    // Space key doubles as the dodge button
+    // Space key doubles as the dodge button (or jump/launch in stages)
     window.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && gameState === 'BOSS_BATTLE' &&
+        if (e.code !== 'Space') return;
+        if (gameState === 'BOSS_BATTLE' &&
             !document.getElementById('dodgeButton').classList.contains('hidden')) {
             e.preventDefault();
             attemptDodge();
+        } else if (gameState === 'STAGE') {
+            e.preventDefault();
+            stageTap();
         }
     });
 
@@ -1010,6 +1163,7 @@
             this.emoji = kindDef.emoji || STAFF_EMOJIS[Math.floor(Math.random() * STAFF_EMOJIS.length)];
             this.size = kindDef.size;
             this.speedMul = kindDef.speedMul;
+            this.penaltyText = kindDef.penaltyText || '';
             this.x = Math.random() * (canvas.width - 100) + 50;
             this.y = -100; // Start above screen
             // Random movement patterns
@@ -1110,13 +1264,16 @@
     }
 
     class Boss {
-        constructor() {
+        constructor(opts) {
+            opts = opts || {};
             const diff = DIFFICULTIES[currentDifficulty];
             this.x = canvas.width / 2;
             this.y = canvas.height / 3;
-            this.size = 150;
-            this.hp = diff.bossHP;
-            this.maxHP = diff.bossHP;
+            this.size = opts.size || 150;
+            this.hp = opts.hp || diff.bossHP;
+            this.maxHP = this.hp;
+            this.emoji = opts.emoji || null;      // set = midboss drawn as emoji instead of unknown.png
+            this.isMidboss = !!opts.isMidboss;
             this.vx = 3;
             this.vy = 2;
             this.hitFlash = 0;
@@ -1178,7 +1335,7 @@
                 totalTime: enr ? 145 : 180,
                 currentTime: 0,
                 dodged: false,
-                text: BOSS_PHRASES[Math.floor(Math.random() * BOSS_PHRASES.length)]
+                text: (this.isMidboss ? MIDBOSS_PHRASES : BOSS_PHRASES)[Math.floor(Math.random() * (this.isMidboss ? MIDBOSS_PHRASES : BOSS_PHRASES).length)]
             };
             playSound('warning');
         }
@@ -1197,8 +1354,8 @@
             ctx.fillStyle = this.enraged ? '#FF9100' : '#00FF00';
             ctx.fillRect(barX, barY, barWidth * (this.hp / this.maxHP), barHeight);
 
-            // Draw boss image with charge effect
-            if (bossImage.complete) {
+            // Draw boss (emoji midboss or unknown.png) with charge effect
+            if (this.emoji || bossImage.complete) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.scale(this.chargeScale, this.chargeScale);
@@ -1223,7 +1380,14 @@
                     ctx.globalAlpha = 0.5;
                 }
 
-                ctx.drawImage(bossImage, -this.size/2, -this.size/2, this.size, this.size);
+                if (this.emoji) {
+                    ctx.font = `${Math.round(this.size * 0.8)}px serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.emoji, 0, 0);
+                } else {
+                    ctx.drawImage(bossImage, -this.size/2, -this.size/2, this.size, this.size);
+                }
                 ctx.restore();
             }
         }
@@ -1238,7 +1402,8 @@
             }
 
             // Show random boss phrase
-            const phrase = BOSS_PHRASES[Math.floor(Math.random() * BOSS_PHRASES.length)];
+            const pool = this.isMidboss ? MIDBOSS_PHRASES : BOSS_PHRASES;
+            const phrase = pool[Math.floor(Math.random() * pool.length)];
             bossDialogue = {
                 text: this.enraged ? phrase + '！！' : phrase,
                 x: this.x,
@@ -1280,11 +1445,31 @@
         document.getElementById('startScreen').classList.toggle('hidden', show);
     }
 
+    const BOSS_GAMEOVER_STORY = `投気楼は「謎の存在」の手に落ちた。
+店の餃子はすべてカレー味に変えられてしまったという……
+
+だが、餃子投男の魂は不滅。
+立ち上がれ、再び餃子を握るのだ！`;
+
+    function startMode(mode) {
+        currentMode = mode;
+        if (mode === 'mario' || mode === 'sonic' || mode === 'pachinko') {
+            startStage(mode);
+        } else {
+            startGame();
+        }
+    }
+
     function startGame() {
         if (audioContext.state === 'suspended') audioContext.resume();
 
         const diff = DIFFICULTIES[currentDifficulty];
         gameState = 'PLAYING';
+        nextMidbossScore = currentMode === 'akunin' ? Math.round(diff.trigger / 2) : Infinity;
+        pendingMidboss = false;
+        document.getElementById('gameOverStory').innerText = currentMode === 'akunin'
+            ? '悪人どもの巣窟で、餃子投男は力尽きた……。\nだが街の平和のため、彼はまた餃子を手に取るだろう。'
+            : BOSS_GAMEOVER_STORY;
         score = 0;
         timeLeft = diff.time;
         difficultyMultiplier = diff.speed;
@@ -1311,15 +1496,8 @@
         // Create initial targets
         for(let i=0; i<3; i++) targets.push(new Target());
 
-        document.getElementById('startScreen').classList.add('hidden');
-        document.getElementById('resultScreen').classList.add('hidden');
-        document.getElementById('gameOverScreen').classList.add('hidden');
-        document.getElementById('bossVictoryScreen').classList.add('hidden');
-        document.getElementById('warningScreen').classList.add('hidden');
-        document.getElementById('bossIntroScreen').classList.add('hidden');
-        document.getElementById('dodgeButton').classList.add('hidden');
+        hideAllScreens();
         document.getElementById('hud').classList.remove('hidden');
-        document.getElementById('bossHud').classList.add('hidden');
 
         updateHUD();
         startBGM('main');
@@ -1327,18 +1505,19 @@
         gameLoopId = requestAnimationFrame(gameLoop);
     }
 
+    function hideAllScreens() {
+        ['startScreen','resultScreen','gameOverScreen','bossVictoryScreen','warningScreen',
+         'bossIntroScreen','dodgeButton','hud','bossHud','stageHud','stageClearScreen','storyScreen']
+            .forEach(id => document.getElementById(id).classList.add('hidden'));
+    }
+
     function resetGame() {
         stopBGM();
-        document.getElementById('resultScreen').classList.add('hidden');
-        document.getElementById('gameOverScreen').classList.add('hidden');
-        document.getElementById('bossVictoryScreen').classList.add('hidden');
-        document.getElementById('warningScreen').classList.add('hidden');
-        document.getElementById('bossIntroScreen').classList.add('hidden');
-        document.getElementById('dodgeButton').classList.add('hidden');
+        gameState = 'START';
+        stage = null;
+        hideAllScreens();
         document.getElementById('startScreen').classList.remove('hidden');
-        document.getElementById('hud').classList.add('hidden');
-        document.getElementById('bossHud').classList.add('hidden');
-        document.getElementById('highScoreDisp').innerText = highScore;
+        document.getElementById('highScoreDisp').innerText = getHS('kentei');
 
         // Quick render of background
         ctx.fillStyle = '#fdfbf7'; // Clear canvas
@@ -1346,12 +1525,9 @@
     }
 
     function updateHighScore() {
-        if (score > highScore) {
-            highScore = score;
-            saveHighScore(highScore);
-            return true;
-        }
-        return false;
+        const isNew = updateModeHS(currentMode, score);
+        highScore = getHS('kentei');
+        return isNew;
     }
 
     function endGame() {
@@ -1363,13 +1539,15 @@
         const rank = calculateRank(score);
         const isNewRecord = updateHighScore();
 
+        document.getElementById('resultTitle').innerText =
+            currentMode === 'kentei' ? '試験終了！' : `「${MODE_NAMES[currentMode]}」終了！`;
         document.getElementById('finalScore').innerText = score;
         document.getElementById('rankTitle').innerText = rank.title;
         document.getElementById('rankDesc').innerText = rank.desc;
         document.getElementById('newRecord').classList.toggle('hidden', !isNewRecord);
         document.getElementById('statMaxCombo').innerText = maxCombo;
         document.getElementById('statAccuracy').innerText = throwsCount > 0 ? Math.round(hitsCount / throwsCount * 100) : 0;
-        document.getElementById('statHighScore').innerText = highScore;
+        document.getElementById('statHighScore').innerText = getHS(currentMode);
 
         document.getElementById('hud').classList.add('hidden');
         document.getElementById('resultScreen').classList.remove('hidden');
@@ -1434,19 +1612,48 @@
         }
     }
 
-    function beginBossBattle() {
+    function beginBossBattle(isMidboss) {
+        const diff = DIFFICULTIES[currentDifficulty];
         gameState = 'BOSS_BATTLE';
-        boss = new Boss();
-        bossTimeLeft = DIFFICULTIES[currentDifficulty].bossTime;
+        if (isMidboss) {
+            const e = MIDBOSS_EMOJIS[Math.floor(Math.random() * MIDBOSS_EMOJIS.length)];
+            boss = new Boss({ emoji: e, isMidboss: true, size: 110, hp: Math.ceil(diff.bossHP * 0.35) });
+            bossTimeLeft = 20;
+        } else {
+            boss = new Boss();
+            bossTimeLeft = diff.bossTime;
+        }
         targets = []; // Clear normal targets
         projectiles = [];
         powerups = [];
         powerupSpawnTimer = 8;
+        document.getElementById('warningScreen').classList.add('hidden');
         document.getElementById('bossIntroScreen').classList.add('hidden');
+        document.getElementById('hud').classList.add('hidden');
         document.getElementById('bossHud').classList.remove('hidden');
         startBGM('boss');
         lastTime = performance.now();
         gameLoopId = requestAnimationFrame(gameLoop);
+    }
+
+    function midbossDefeated() {
+        playSound('victory');
+        score += 20;
+        timeLeft += 10;
+        playerHP = Math.min(3, playerHP + 1);
+        nextMidbossScore = score + 80;
+        spawnScorePopup(canvas.width / 2, canvas.height / 2, '中ボス撃破！ +20皿 時間+10秒', '#FFD700');
+        for (let k = 0; k < 12; k++) particles.push(new Particle(boss.x, boss.y));
+        boss = null;
+        bossAttack = null;
+        projectiles = [];
+        targets = [];
+        for (let i = 0; i < 3; i++) targets.push(new Target());
+        document.getElementById('dodgeButton').classList.add('hidden');
+        document.getElementById('bossHud').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        startBGM('main');
+        gameState = 'PLAYING';
     }
 
     function attemptDodge() {
@@ -1503,7 +1710,7 @@
             comboTimer = 0;
             shakeTime = 15;
             playSound('bad');
-            spawnScorePopup(t.x, t.y, `${t.points}皿… お客様!!`, '#B71C1C');
+            spawnScorePopup(t.x, t.y, `${t.points}皿… ${t.penaltyText || 'お客様!!'}`, '#B71C1C');
         } else {
             t.hitEmoji = '😋';
             combo++;
@@ -1538,10 +1745,22 @@
         const deltaTime = (timestamp - lastTime) / 1000;
         lastTime = timestamp;
 
-        // Check if we need to trigger boss battle
-        if (gameState === 'PLAYING' && score >= DIFFICULTIES[currentDifficulty].trigger) {
+        // Check if we need to trigger a boss battle (final boss in kentei, midboss in akunin)
+        if (gameState === 'PLAYING' && currentMode === 'kentei' && score >= DIFFICULTIES[currentDifficulty].trigger) {
             gameState = 'WARNING';
             warningTimer = 3; // 3 seconds warning
+            pendingMidboss = false;
+            stopBGM();
+            document.getElementById('warningScreen').classList.remove('hidden');
+            playSound('warning');
+            lastTime = timestamp;
+            requestAnimationFrame(gameLoop);
+            return;
+        }
+        if (gameState === 'PLAYING' && currentMode === 'akunin' && score >= nextMidbossScore) {
+            gameState = 'WARNING';
+            warningTimer = 1.5;
+            pendingMidboss = true;
             stopBGM();
             document.getElementById('warningScreen').classList.remove('hidden');
             playSound('warning');
@@ -1554,8 +1773,14 @@
         if (gameState === 'WARNING') {
             warningTimer -= deltaTime;
             if (warningTimer <= 0) {
-                // Story cut-in before the battle begins
-                showBossIntro();
+                if (pendingMidboss) {
+                    // Straight into the midboss fight (no story cut-in)
+                    pendingMidboss = false;
+                    beginBossBattle(true);
+                } else {
+                    // Story cut-in before the final battle begins
+                    showBossIntro();
+                }
                 return;
             }
             requestAnimationFrame(gameLoop);
@@ -1792,7 +2017,12 @@
                     }
 
                     if (defeated) {
-                        // Boss defeated!
+                        if (boss.isMidboss) {
+                            // Midboss down: back to villain hunting
+                            midbossDefeated();
+                            break;
+                        }
+                        // Final boss defeated!
                         gameState = 'BOSS_VICTORY';
                         cancelAnimationFrame(gameLoopId);
                         ctx.restore();
@@ -1808,7 +2038,7 @@
                         const dy = p.y - t.y;
                         const dist = Math.sqrt(dx*dx + dy*dy);
 
-                        if (dist < 40 + p.radius) { // Hit!
+                        if (dist < t.size * 0.8 + p.radius) { // Hit! (big targets = big hitbox)
                             handleTargetHit(t, i);
                             break; // One gyoza hits one target
                         }
@@ -1973,6 +2203,7 @@
                 updateHighScore();
                 document.getElementById('gameOverScore').innerText = score;
                 document.getElementById('bossHud').classList.add('hidden');
+                document.getElementById('stageHud').classList.add('hidden');
                 document.getElementById('dodgeButton').classList.add('hidden');
                 document.getElementById('gameOverScreen').classList.remove('hidden');
             }
@@ -1990,6 +2221,672 @@
         document.getElementById('bossHud').classList.add('hidden');
         document.getElementById('dodgeButton').classList.add('hidden');
         document.getElementById('bossVictoryScreen').classList.remove('hidden');
+    }
+
+    // ================= STAGE ENGINE (Mario / Sonic / Pachinko) =================
+    // All stages are one-thumb: a single tap is the only input.
+    let stage = null;
+
+    function startStage(mode) {
+        if (audioContext.state === 'suspended') audioContext.resume();
+        gameState = 'STAGE';
+        score = 0;
+        particles = [];
+        scorePopups = [];
+        projectiles = [];
+        powerups = [];
+        shakeTime = 0;
+        hideAllScreens();
+        document.getElementById('stageHud').classList.remove('hidden');
+        if (mode === 'mario') stage = buildMario();
+        else if (mode === 'sonic') stage = buildSonic();
+        else stage = buildPachinko();
+        startBGM(mode === 'sonic' ? 'sonic' : 'main');
+        lastTime = performance.now();
+        gameLoopId = requestAnimationFrame(stageLoop);
+    }
+
+    function stageLoop(ts) {
+        if (gameState !== 'STAGE' || !stage) return;
+        lastTime = ts;
+        stage.update();
+        if (gameState !== 'STAGE') return; // the stage may have just ended
+        stage.draw(ts);
+
+        // Particles & popups on top
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.update();
+            p.draw();
+            if (p.life <= 0) particles.splice(i, 1);
+        }
+        updateScorePopups();
+        document.getElementById('stageHudText').innerText = stage.hudText();
+
+        gameLoopId = requestAnimationFrame(stageLoop);
+    }
+
+    function stageTap() {
+        if (stage && stage.tap) stage.tap();
+    }
+
+    function stageClear(detail) {
+        gameState = 'STAGE_CLEAR';
+        cancelAnimationFrame(gameLoopId);
+        stopBGM();
+        playSound('victory');
+        const isNew = updateModeHS(currentMode, score);
+        document.getElementById('stageClearTitle').innerText = `🎉 ${MODE_NAMES[currentMode]} クリア！ 🎉`;
+        document.getElementById('stageClearScore').innerText = score;
+        document.getElementById('stageClearDetail').innerText = detail || '';
+        document.getElementById('stageClearBest').innerText = getHS(currentMode) + (isNew ? ' ✨新記録!✨' : '');
+        document.getElementById('stageHud').classList.add('hidden');
+        document.getElementById('stageClearScreen').classList.remove('hidden');
+    }
+
+    function stageFail(message) {
+        gameState = 'GAME_OVER';
+        cancelAnimationFrame(gameLoopId);
+        stopBGM();
+        document.getElementById('gameOverStory').innerText = message;
+        showExplosionAndGameOver();
+    }
+
+    // Small inline particle for stage effects
+    function stageBurst(x, y, text, n) {
+        for (let k = 0; k < n; k++) {
+            particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 12,
+                vy: -Math.random() * 8 - 2,
+                life: 35,
+                text,
+                size: Math.random() * 18 + 14,
+                update() { this.x += this.vx; this.y += this.vy; this.vy += 0.4; this.life--; },
+                draw() {
+                    ctx.globalAlpha = this.life / 35;
+                    ctx.font = `${this.size}px serif`;
+                    ctx.fillText(this.text, this.x, this.y);
+                    ctx.globalAlpha = 1.0;
+                }
+            });
+        }
+    }
+
+    // ---------------- Mario-style: 餃子大冒険 ----------------
+    function buildMario() {
+        const diff = DIFFICULTIES[currentDifficulty];
+        const L = 5200;
+        const s = {
+            mode: 'mario', camX: 0, speed: 4.3 * diff.speed, hearts: 3, inv: 0, coins: 0,
+            py: null, prevPy: 0, vy: 0, jumps: 0, length: L,
+            gaps: [], platforms: [], coinsArr: [], enemies: [], clouds: []
+        };
+        let x = 700;
+        while (x < L - 500) {
+            const r = Math.random();
+            if (r < 0.26) {
+                const w = 90 + Math.random() * 70;
+                s.gaps.push({ x, w });
+                x += w + 200;
+            } else if (r < 0.52) {
+                const pw = 130 + Math.random() * 90;
+                const dy = 120 + Math.random() * 70; // height above ground
+                s.platforms.push({ x, dy, w: pw });
+                for (let cx = x + 20; cx < x + pw - 10; cx += 45) {
+                    s.coinsArr.push({ x: cx, dy: dy + 50, taken: false });
+                }
+                x += pw + 170;
+            } else if (r < 0.78) {
+                for (let k = 0; k < 5; k++) {
+                    s.coinsArr.push({ x: x + k * 45, dy: 60 + (k < 3 ? k : 4 - k) * 25, taken: false });
+                }
+                x += 310;
+            } else {
+                s.enemies.push({ x: x + 60, baseX: x + 60, dir: 1, alive: true });
+                x += 270;
+            }
+        }
+        for (let i = 0; i < 8; i++) {
+            s.clouds.push({ x: Math.random() * 3000, y: 40 + Math.random() * 130, sz: 30 + Math.random() * 30 });
+        }
+
+        s.tap = () => {
+            if (s.jumps < 2) {
+                s.vy = s.jumps === 0 ? -16 : -13;
+                s.jumps++;
+                playSound('jump');
+            }
+        };
+        s.hudText = () =>
+            '❤️'.repeat(s.hearts) + '🖤'.repeat(Math.max(0, 3 - s.hearts)) +
+            `  🥟×${s.coins}  得点:${score}皿  ` +
+            `${Math.min(100, Math.round(s.camX / (s.length - 400) * 100))}%`;
+
+        s.update = () => {
+            const gY = canvas.height - 110;
+            if (s.py === null) s.py = gY;
+            s.camX += s.speed;
+            const wx = s.camX + 130;
+            if (s.inv > 0) s.inv--;
+
+            s.prevPy = s.py;
+            s.vy += 0.9;
+            s.py += s.vy;
+
+            // Land on platforms (only when falling across the top edge)
+            let landed = false;
+            for (const p of s.platforms) {
+                const top = gY - p.dy;
+                if (wx > p.x - 15 && wx < p.x + p.w + 15 && s.vy >= 0 && s.prevPy <= top + 2 && s.py >= top) {
+                    s.py = top; s.vy = 0; s.jumps = 0; landed = true;
+                    break;
+                }
+            }
+            // Land on ground (unless over a pit)
+            const overGap = s.gaps.some(g => wx > g.x && wx < g.x + g.w);
+            if (!landed && !overGap && s.py >= gY) { s.py = gY; s.vy = 0; s.jumps = 0; }
+
+            // Fell into a pit
+            if (s.py > canvas.height + 80) {
+                s.hearts--;
+                playSound('bad');
+                if (s.hearts <= 0) {
+                    stageFail('穴に落ちてしまった……。\n餃子大冒険は、ここで幕を閉じた。');
+                    return;
+                }
+                const g = s.gaps.find(g => wx > g.x - 40 && wx < g.x + g.w + 40);
+                if (g) s.camX = g.x + g.w + 40 - 130;
+                s.py = gY - 120; s.vy = 0; s.inv = 90;
+                spawnScorePopup(130, canvas.height / 2, '落下！ ❤−1', '#B71C1C');
+            }
+
+            // Collect gyoza coins
+            for (const c of s.coinsArr) {
+                if (c.taken) continue;
+                if (Math.abs(c.x - wx) < 40 && Math.abs((gY - c.dy) - (s.py - 25)) < 45) {
+                    c.taken = true; s.coins++; score++;
+                    playSound('coin');
+                }
+            }
+
+            // Enemies (angry customers patrolling the ground)
+            for (const e of s.enemies) {
+                if (!e.alive) continue;
+                e.x += e.dir * 1.2;
+                if (Math.abs(e.x - e.baseX) > 70) e.dir *= -1;
+                if (Math.abs(e.x - wx) < 35 && s.py > gY - 55) {
+                    if (s.vy > 2 && s.py < gY - 22) {
+                        // Stomped from above!
+                        e.alive = false; s.vy = -12; score += 3;
+                        playSound('hit', { combo: 5 });
+                        spawnScorePopup(130, s.py - 40, '踏んづけた！ +3皿', '#2E7D32');
+                        stageBurst(130, s.py, '💫', 4);
+                    } else if (s.inv <= 0) {
+                        s.hearts--; s.inv = 100; s.vy = -9;
+                        playSound('bad');
+                        spawnScorePopup(130, s.py - 40, '😡に激突！ ❤−1', '#B71C1C');
+                        if (s.hearts <= 0) {
+                            stageFail('怒れるお客様に捕まってしまった……。\n「あとデカイのは、俺の怒りだ」');
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Goal!
+            if (wx >= s.length) {
+                const bonus = s.hearts * 10;
+                score += bonus;
+                stageClear(`集めた餃子: ${s.coins}個 ／ 残り❤ボーナス: +${bonus}皿`);
+            }
+        };
+
+        s.draw = () => {
+            const W = canvas.width, H = canvas.height, gY = H - 110;
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = '#aee3ff';
+            ctx.fillRect(0, 0, W, H);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Parallax clouds
+            ctx.globalAlpha = 0.8;
+            for (const c of s.clouds) {
+                const span = W + 300;
+                const sx = ((c.x - s.camX * 0.4) % span + span) % span - 150;
+                ctx.font = `${c.sz}px serif`;
+                ctx.fillText('☁️', sx, c.y);
+            }
+            ctx.globalAlpha = 1;
+
+            // Ground with pits cut out
+            ctx.fillStyle = '#8d5a2b';
+            ctx.fillRect(0, gY, W, H - gY);
+            ctx.fillStyle = '#5cb85c';
+            ctx.fillRect(0, gY, W, 12);
+            for (const g of s.gaps) {
+                const sx = g.x - s.camX;
+                if (sx < W && sx + g.w > 0) {
+                    ctx.fillStyle = '#aee3ff';
+                    ctx.fillRect(sx, gY, g.w, H - gY);
+                }
+            }
+
+            // Platforms
+            for (const p of s.platforms) {
+                const sx = p.x - s.camX;
+                if (sx > W || sx + p.w < 0) continue;
+                const top = gY - p.dy;
+                ctx.fillStyle = '#c1440e';
+                ctx.fillRect(sx, top, p.w, 20);
+                ctx.fillStyle = '#e07b39';
+                ctx.fillRect(sx, top, p.w, 6);
+            }
+
+            // Coins
+            ctx.font = '26px serif';
+            for (const c of s.coinsArr) {
+                if (c.taken) continue;
+                const sx = c.x - s.camX;
+                if (sx < -40 || sx > W + 40) continue;
+                ctx.fillText('🥟', sx, gY - c.dy);
+            }
+
+            // Enemies
+            ctx.font = '38px serif';
+            for (const e of s.enemies) {
+                if (!e.alive) continue;
+                const sx = e.x - s.camX;
+                if (sx < -50 || sx > W + 50) continue;
+                ctx.save();
+                ctx.translate(sx, gY - 22);
+                if (e.dir < 0) ctx.scale(-1, 1);
+                ctx.fillText('😡', 0, 0);
+                ctx.restore();
+            }
+
+            // Goal flag
+            const gx = s.length - s.camX;
+            if (gx < W + 80) {
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(gx, gY);
+                ctx.lineTo(gx, gY - 220);
+                ctx.stroke();
+                ctx.font = '50px serif';
+                ctx.fillText('🚩', gx + 24, gY - 198);
+            }
+
+            // Player (blink while invincible)
+            if (s.inv <= 0 || s.inv % 10 < 5) {
+                ctx.font = '48px serif';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(PLAYER_EMOJI, 130, s.py + 2);
+                ctx.textBaseline = 'middle';
+            }
+
+            // Progress bar
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.fillRect(W * 0.2, 14, W * 0.6, 8);
+            ctx.fillStyle = '#FBC02D';
+            ctx.fillRect(W * 0.2, 14, W * 0.6 * Math.min(1, s.camX / (s.length - 400)), 8);
+        };
+        return s;
+    }
+
+    // ---------------- Sonic-style: 音速餃子 ----------------
+    function buildSonic() {
+        const diff = DIFFICULTIES[currentDifficulty];
+        const L = 9000;
+        const s = {
+            mode: 'sonic', camX: 0, speed: 8 * diff.speed, baseMax: 17 * diff.speed, boost: 0,
+            gyoza: 0, inv: 0, airborne: false, vy: 0, py: null, rot: 0, jumps: 0, length: L,
+            items: []
+        };
+        let x = 500;
+        while (x < L - 600) {
+            const r = Math.random();
+            if (r < 0.45) {
+                for (let k = 0; k < 6; k++) s.items.push({ x: x + k * 70, type: 'gyoza' });
+                x += 570;
+            } else if (r < 0.6) {
+                s.items.push({ x, type: 'spring' });
+                for (let k = 0; k < 4; k++) s.items.push({ x: x + 160 + k * 70, type: 'gyoza', air: 150 });
+                x += 620;
+            } else if (r < 0.75) {
+                s.items.push({ x, type: 'boost' });
+                x += 400;
+            } else {
+                s.items.push({ x, type: 'bomb' });
+                x += 360;
+            }
+        }
+        s.terrain = (x) => {
+            const gY = canvas.height - 90;
+            const y = gY - (Math.sin(x * 0.0028) * 55 + Math.sin(x * 0.0011) * 75 + 130);
+            return Math.min(gY, Math.max(canvas.height * 0.3, y));
+        };
+
+        s.tap = () => {
+            if (!s.airborne) {
+                s.airborne = true; s.vy = -15; s.jumps = 1;
+                playSound('jump');
+            } else if (s.jumps < 2) {
+                s.vy = -13; s.jumps = 2;
+                playSound('jump');
+            }
+        };
+        s.hudText = () =>
+            `🥟×${s.gyoza}  得点:${score}皿  🚀速度:${Math.round(s.speed)}  ` +
+            `${Math.min(100, Math.round(s.camX / (s.length - 500) * 100))}%`;
+
+        s.update = () => {
+            s.camX += s.speed;
+            if (s.boost > 0) s.boost--;
+            else s.speed = Math.min(s.baseMax, s.speed + 0.004);
+            const wx = s.camX + 150;
+            if (s.inv > 0) s.inv--;
+
+            const ty = s.terrain(wx);
+            if (s.py === null) s.py = ty;
+            if (s.airborne) {
+                s.vy += 0.85;
+                s.py += s.vy;
+                s.rot += 0.35;
+                if (s.py >= s.terrain(wx)) {
+                    s.py = s.terrain(wx);
+                    s.airborne = false; s.vy = 0; s.jumps = 0; s.rot = 0;
+                }
+            } else {
+                s.py = ty;
+            }
+
+            for (const it of s.items) {
+                if (it.taken) continue;
+                const iy = it.air ? s.terrain(it.x) - it.air : s.terrain(it.x) - 30;
+                if (Math.abs(it.x - wx) < 38 && Math.abs(iy - (s.py - 25)) < 55) {
+                    if (it.type === 'gyoza') {
+                        it.taken = true; s.gyoza++; score++;
+                        playSound('coin');
+                    } else if (it.type === 'spring') {
+                        it.taken = true; s.vy = -22; s.airborne = true; s.jumps = 1;
+                        playSound('spring');
+                    } else if (it.type === 'boost') {
+                        it.taken = true;
+                        s.speed = s.baseMax * 1.35; s.boost = 100;
+                        playSound('powerup');
+                        spawnScorePopup(150, s.py - 90, '🚀 加速！', '#0277BD');
+                    } else if (it.type === 'bomb' && s.inv <= 0) {
+                        if (s.gyoza > 0) {
+                            const lost = Math.min(s.gyoza, 10);
+                            s.gyoza -= lost;
+                            score = Math.max(0, score - lost);
+                            s.inv = 100;
+                            s.speed = Math.max(7, s.speed * 0.6);
+                            playSound('explosion');
+                            stageBurst(150, s.py - 20, '🥟', lost);
+                            spawnScorePopup(150, s.py - 90, `💥 餃子が${lost}個散らばった！`, '#B71C1C');
+                        } else {
+                            stageFail('餃子を一つも持たずに爆弾を踏んでしまった……。\n音速の旅は、ここで終わった。');
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if (wx >= s.length) {
+                const bonus = Math.round(s.speed * 3);
+                score += bonus;
+                stageClear(`集めた餃子: ${s.gyoza}個 ／ ゴール速度ボーナス: +${bonus}皿`);
+            }
+        };
+
+        s.draw = (ts) => {
+            const W = canvas.width, H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, '#0b3d91');
+            grad.addColorStop(1, '#66d9e8');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Rolling terrain
+            ctx.fillStyle = '#1b6b45';
+            ctx.beginPath();
+            ctx.moveTo(0, H);
+            for (let sx = 0; sx <= W + 24; sx += 24) {
+                ctx.lineTo(sx, s.terrain(s.camX + sx));
+            }
+            ctx.lineTo(W, H);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#37b26c';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            for (let sx = 0; sx <= W + 24; sx += 24) {
+                const y = s.terrain(s.camX + sx);
+                if (sx === 0) ctx.moveTo(sx, y);
+                else ctx.lineTo(sx, y);
+            }
+            ctx.stroke();
+
+            // Items
+            for (const it of s.items) {
+                if (it.taken) continue;
+                const sx = it.x - s.camX;
+                if (sx < -60 || sx > W + 60) continue;
+                const iy = it.air ? s.terrain(it.x) - it.air : s.terrain(it.x) - 30;
+                if (it.type === 'gyoza') { ctx.font = '26px serif'; ctx.fillText('🥟', sx, iy); }
+                else if (it.type === 'spring') { ctx.font = '36px serif'; ctx.fillText('🌀', sx, iy); }
+                else if (it.type === 'boost') { ctx.font = '34px serif'; ctx.fillText('⚡', sx, iy); }
+                else { ctx.font = '32px serif'; ctx.fillText('💣', sx, iy); }
+            }
+
+            // Goal
+            const gx = s.length - s.camX;
+            if (gx < W + 80) {
+                ctx.font = '56px serif';
+                ctx.fillText('🏁', gx, s.terrain(s.length) - 50);
+            }
+
+            // Speed lines for that sonic feeling
+            if (s.speed > s.baseMax * 0.75) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 2;
+                for (let k = 0; k < 8; k++) {
+                    const ly = (ts * 0.5 + k * 97) % H;
+                    const lx = (k * 173 + ts * (s.speed * 0.12)) % W;
+                    ctx.beginPath();
+                    ctx.moveTo(W - lx, ly);
+                    ctx.lineTo(W - lx - s.speed * 4, ly);
+                    ctx.stroke();
+                }
+            }
+
+            // Player (spins in the air)
+            if (s.inv <= 0 || s.inv % 10 < 5) {
+                ctx.save();
+                ctx.translate(150, s.py - 25);
+                if (s.airborne) ctx.rotate(s.rot);
+                ctx.font = '46px serif';
+                ctx.fillText(PLAYER_EMOJI, 0, 0);
+                ctx.restore();
+            }
+
+            // Progress bar
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fillRect(W * 0.2, 14, W * 0.6, 8);
+            ctx.fillStyle = '#FBC02D';
+            ctx.fillRect(W * 0.2, 14, W * 0.6 * Math.min(1, s.camX / (s.length - 500)), 8);
+        };
+        return s;
+    }
+
+    // ---------------- Pachinko-style: 大当たり餃子玉 ----------------
+    function buildPachinko() {
+        const ballCounts = { easy: 15, normal: 12, hard: 9 };
+        const s = {
+            mode: 'pachinko', ballsLeft: ballCounts[currentDifficulty], active: [],
+            pegs: [], fever: 0, jackpots: 0, done: false, t: 0, sweepX: 0,
+            pocketVals: [5, 15, 77, 15, 5]
+        };
+        const W = canvas.width, H = canvas.height;
+        const cols = Math.max(6, Math.floor(W / 70));
+        for (let r = 0; r < 7; r++) {
+            const y = 160 + r * ((H - 420) / 6);
+            const off = (r % 2) * 32;
+            for (let c = 0; c < cols; c++) {
+                const x = 45 + off + c * ((W - 90) / Math.max(1, cols - 1));
+                if (x > W - 40) continue;
+                if (Math.random() < 0.08) continue;
+                s.pegs.push({ x, y });
+            }
+        }
+
+        s.tap = () => {
+            if (s.ballsLeft > 0) {
+                s.ballsLeft--;
+                s.active.push({ x: s.sweepX, y: 70, vx: (Math.random() - 0.5) * 1.5, vy: 1 });
+                playSound('throw');
+            }
+        };
+        s.hudText = () =>
+            `残り玉:${'🥟'.repeat(Math.min(5, s.ballsLeft))}×${s.ballsLeft}  得点:${score}皿` +
+            (s.fever > 0 ? '  ⭐確変中! 得点2倍⭐' : '');
+
+        s.update = () => {
+            s.t++;
+            if (s.fever > 0) s.fever--;
+            s.sweepX = canvas.width / 2 + Math.sin(s.t * 0.03) * (canvas.width / 2 - 60);
+
+            for (let i = s.active.length - 1; i >= 0; i--) {
+                const b = s.active[i];
+                b.vy += 0.32;
+                b.x += b.vx;
+                b.y += b.vy;
+                if (b.x < 20) { b.x = 20; b.vx = Math.abs(b.vx) * 0.8; }
+                if (b.x > canvas.width - 20) { b.x = canvas.width - 20; b.vx = -Math.abs(b.vx) * 0.8; }
+
+                for (const p of s.pegs) {
+                    const dx = b.x - p.x, dy = b.y - p.y;
+                    const d = Math.hypot(dx, dy);
+                    if (d < 16 && d > 0) {
+                        const nx = dx / d, ny = dy / d;
+                        const dot = b.vx * nx + b.vy * ny;
+                        if (dot < 0) {
+                            b.vx -= 2 * dot * nx;
+                            b.vy -= 2 * dot * ny;
+                            b.vx *= 0.72;
+                            b.vy *= 0.72;
+                            b.vx += (Math.random() - 0.5) * 0.8;
+                            if (dot < -3) playSound('peg');
+                        }
+                        b.x = p.x + nx * 16;
+                        b.y = p.y + ny * 16;
+                    }
+                }
+
+                // Landed in a pocket
+                if (b.y > canvas.height - 90) {
+                    const zone = Math.min(4, Math.max(0, Math.floor(b.x / canvas.width * 5)));
+                    const jackpot = zone === 2;
+                    let gain = s.pocketVals[zone];
+                    if (s.fever > 0) gain *= 2;
+                    score += gain;
+                    spawnScorePopup(b.x, canvas.height - 130, `+${gain}皿${jackpot ? ' 🎉大当たり!!' : ''}`,
+                        jackpot ? '#FF8F00' : '#FFD54F');
+                    if (jackpot) {
+                        s.fever = 600; // 10 seconds of doubled pockets
+                        s.jackpots++;
+                        playSound('fever');
+                        stageBurst(b.x, canvas.height - 160, '🎉', 10);
+                        shakeTime = 20;
+                    } else {
+                        playSound('hit');
+                    }
+                    s.active.splice(i, 1);
+                }
+            }
+
+            if (s.ballsLeft === 0 && s.active.length === 0 && !s.done) {
+                s.done = true;
+                stageClear(`大当たり: ${s.jackpots}回`);
+            }
+        };
+
+        s.draw = () => {
+            const W = canvas.width, H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = '#4a0e0e';
+            ctx.fillRect(0, 0, W, H);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Fever glow
+            if (s.fever > 0) {
+                ctx.fillStyle = `rgba(255,215,0,${0.1 + Math.sin(s.t * 0.2) * 0.05})`;
+                ctx.fillRect(0, 0, W, H);
+            }
+
+            // Pegs
+            for (const p of s.pegs) {
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FFF8DC';
+                ctx.beginPath();
+                ctx.arc(p.x - 1.5, p.y - 1.5, 1.8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Pockets
+            const pw = W / 5;
+            for (let z = 0; z < 5; z++) {
+                const jackpot = z === 2;
+                ctx.fillStyle = jackpot ? '#B71C1C' : '#2a0808';
+                ctx.fillRect(z * pw + 3, H - 88, pw - 6, 78);
+                ctx.strokeStyle = jackpot ? '#FFD700' : '#8d6e63';
+                ctx.lineWidth = jackpot ? 4 : 2;
+                ctx.strokeRect(z * pw + 3, H - 88, pw - 6, 78);
+                ctx.fillStyle = jackpot ? '#FFD700' : '#FFCCBC';
+                ctx.font = `bold ${jackpot ? 26 : 20}px serif`;
+                ctx.fillText(jackpot ? `🎯${s.pocketVals[z]}` : `${s.pocketVals[z]}`, z * pw + pw / 2, H - 49);
+            }
+
+            // Sweeping launcher indicator
+            ctx.fillStyle = '#FBC02D';
+            ctx.font = '30px serif';
+            ctx.fillText('▼', s.sweepX, 46);
+            ctx.strokeStyle = 'rgba(251,192,45,0.35)';
+            ctx.setLineDash([6, 8]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(s.sweepX, 60);
+            ctx.lineTo(s.sweepX, 130);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Balls
+            ctx.font = '24px serif';
+            for (const b of s.active) {
+                ctx.fillText('🥟', b.x, b.y);
+            }
+
+            if (s.fever > 0) {
+                ctx.font = `bold ${Math.min(W / 12, 36)}px serif`;
+                ctx.fillStyle = '#FFD700';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.strokeText('⭐ 確変中！ ⭐', W / 2, 110);
+                ctx.fillText('⭐ 確変中！ ⭐', W / 2, 110);
+            }
+        };
+        return s;
     }
 
     // Initial Draw
