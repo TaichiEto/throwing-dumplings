@@ -2,7 +2,9 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>餃子投げ検定試験 | Gyoza Throwing Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -10,6 +12,24 @@
 
         /* Fallback in case the Tailwind CDN fails to load: the game must still work */
         .hidden { display: none !important; }
+
+        /* --app-h is kept in sync with the real visible viewport by JS (iOS Safari's
+           100vh includes the URL bar, which pushed the bottom of the game off-screen). */
+        :root {
+            --app-h: 100vh;
+            --safe-b: env(safe-area-inset-bottom, 0px);
+            --safe-t: env(safe-area-inset-top, 0px);
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: var(--app-h);
+            overscroll-behavior: none;
+            position: fixed;
+            inset: 0;
+        }
 
         body {
             font-family: 'Yuji Syuku', serif;
@@ -20,8 +40,8 @@
 
         .game-container {
             position: relative;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: var(--app-h);
             background: repeating-linear-gradient(
                 45deg,
                 #fdfbf7,
@@ -60,8 +80,47 @@
             text-align: center;
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             max-width: 90%;
-            max-height: 90vh;
+        }
+
+        /* Tall menus (the mode list) must stay reachable on short phone screens:
+           scroll inside the layer instead of clipping off the top/bottom. */
+        .ui-layer {
+            box-sizing: border-box;
+            padding: var(--safe-t) 6px var(--safe-b);
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .ui-layer.interactive {
+            touch-action: pan-y;
+        }
+
+        /* "safe" centering: center when it fits, but never push content past the
+           top edge (where it would be unreachable) when it overflows */
+        .ui-layer {
+            justify-content: center;
+            justify-content: safe center;
+        }
+
+        /* Very short screens (iPhone SE etc.): drop the flavour text to fit */
+        @media (max-height: 660px) {
+            .start-flavour { display: none; }
+            .mode-btn small { display: none; }
+            .mode-btn { padding: 7px 4px; }
+            .retro-box p { font-size: clamp(0.7rem, 2.6vw, 0.9rem); }
+        }
+
+        /* Compact layout on short screens so the menu fits without scrolling */
+        @media (max-height: 780px) {
+            .mode-btn {
+                font-size: clamp(0.7rem, 2.6vw, 0.9rem);
+                padding: 6px 4px;
+            }
+            .mode-btn small { font-size: 0.62em; }
+            .item-legend { padding: 5px 10px; gap: 0 10px; }
+            .retro-box h1 { font-size: clamp(1.3rem, 6vw, 2rem); margin-bottom: 0.2rem; }
+            .btn { margin-top: 5px; }
+            .mode-grid { gap: 4px; }
         }
 
         .retro-box h1, .retro-box h2, .retro-box h3 {
@@ -145,17 +204,17 @@
 
         .hud {
             position: absolute;
-            top: 10px;
+            top: calc(10px + var(--safe-t));
             left: 0;
             width: 100%;
             display: flex;
             justify-content: space-between;
             padding: 0 10px;
             font-size: clamp(0.8rem, 3vw, 1.5rem);
-            color: #D32F2F;
+            color: #fff;
             font-weight: bold;
             pointer-events: none;
-            text-shadow: 2px 2px 0px #fff;
+            text-shadow: 0 2px 0 #7f1d1d, 0 0 8px rgba(0,0,0,0.6);
             z-index: 5;
             flex-wrap: wrap;
             gap: 5px;
@@ -177,7 +236,7 @@
             .hud {
                 font-size: clamp(0.6rem, 2.5vw, 1rem);
                 padding: 0 5px;
-                top: 5px;
+                top: calc(5px + var(--safe-t));
             }
 
             .boss-hud {
@@ -192,7 +251,7 @@
 
         .sound-btn {
             position: fixed;
-            bottom: 10px;
+            bottom: calc(10px + var(--safe-b));
             right: 10px;
             z-index: 30;
             background: rgba(255,255,255,0.8);
@@ -317,7 +376,7 @@
 
         .dodge-button-container {
             position: fixed;
-            bottom: 20vh;
+            bottom: calc(var(--app-h) * 0.2 + var(--safe-b));
             left: 50%;
             transform: translateX(-50%);
             z-index: 20;
@@ -332,7 +391,7 @@
 
         @media (max-width: 768px) {
             .dodge-button-container {
-                bottom: 25vh;
+                bottom: calc(var(--app-h) * 0.25 + var(--safe-b));
             }
 
             .dodge-btn {
@@ -343,7 +402,7 @@
 
         @media (max-width: 480px) {
             .dodge-button-container {
-                bottom: 30vh;
+                bottom: calc(var(--app-h) * 0.3 + var(--safe-b));
             }
 
             .dodge-btn {
@@ -372,16 +431,18 @@
 
     <!-- HUD -->
     <div id="hud" class="hud hidden">
-        <div>残り時間: <span id="timer">60</span>秒</div>
-        <div>🔥コンボ: <span id="comboDisp">0</span></div>
-        <div>得点: <span id="score">0</span>皿</div>
+        <div>⏱ <span id="timer">60</span>秒</div>
+        <div>🍽 <span id="ammoDisp">🥟🥟🥟🥟🥟</span></div>
+        <div>🔥<span id="comboDisp">0</span></div>
+        <div>🍜 <span id="score">0</span>皿</div>
     </div>
 
     <!-- Boss HUD -->
     <div id="bossHud" class="hud boss-hud hidden">
-        <div>時間: <span id="bossTimer">45</span>秒</div>
-        <div>ボスHP: <span id="bossHP">50</span>/<span id="bossMaxHP">50</span></div>
-        <div>HP: <span id="playerHP">❤️❤️❤️</span></div>
+        <div>⏱ <span id="bossTimer">45</span></div>
+        <div>🍽 <span id="ammoDispBoss">🥟🥟🥟🥟🥟</span></div>
+        <div>👹 <span id="bossHP">50</span>/<span id="bossMaxHP">50</span></div>
+        <div><span id="playerHP">❤️❤️❤️</span></div>
     </div>
 
     <!-- Stage HUD (Mario / Sonic / Pachinko) -->
@@ -408,8 +469,9 @@
     <div id="startScreen" class="ui-layer interactive">
         <div class="retro-box floating">
             <h1 class="text-4xl mb-2">🥟 餃子投げ検定 🥟</h1>
-            <p class="text-lg mb-2">〜提供された餃子は、投げ返す〜</p>
-            <p class="text-sm mb-2">親指ひとつで遊べる餃子アクション!<br>タップで発射・ジャンプ・玉打ち</p>
+            <p class="text-lg mb-2 start-flavour">〜提供された餃子は、投げ返す〜</p>
+            <p class="text-sm mb-2 start-flavour">親指ひとつで遊べる餃子アクション!<br>タップで発射・ジャンプ・玉打ち</p>
+            <p class="text-xs mb-2" style="color:#FFE082;">🍽 皿の餃子は有限! 乱れ打ちは禁物。<br>⛔マークの相手には当てるな!</p>
             <p class="text-sm mb-1">難易度をえらぶ</p>
             <div class="mb-2">
                 <button id="diffEasy" class="btn btn-diff" onclick="selectDifficulty('easy')">見習い</button>
@@ -431,7 +493,7 @@
                 <button class="btn mode-btn" onclick="startMode('shooting')">🛸 餃子シューティング<small>スライドで移動&自動連射</small></button>
             </div>
 
-            <div class="item-legend">
+            <div id="legendBox" class="item-legend hidden">
                 <div>🥷 忍者店員 … 3皿</div>
                 <div>🐱 猫店員 … 2皿</div>
                 <div>🤴 王様店員 … 5皿</div>
@@ -443,6 +505,7 @@
             </div>
 
             <div>
+                <button class="btn btn-sub" onclick="toggleLegend()">❓ 遊び方</button>
                 <button class="btn btn-sub" onclick="toggleStory(true)">📖 物語</button>
             </div>
         </div>
@@ -599,9 +662,11 @@
 
     // Difficulty
     const DIFFICULTIES = {
-        easy:   { label: '見習い', speed: 0.75, time: 70, bossHP: 35, bossTime: 40, trigger: 60 },
-        normal: { label: '職人',   speed: 1.0,  time: 60, bossHP: 50, bossTime: 30, trigger: 80 },
-        hard:   { label: '鬼',     speed: 1.35, time: 55, bossHP: 70, bossTime: 25, trigger: 100 }
+        // Tuned around the ammo system: you get ~1.7 gyoza/sec, so HP and score
+        // targets assume deliberate aiming rather than mashing.
+        easy:   { label: '見習い', speed: 0.75, time: 70, bossHP: 28, bossTime: 45, trigger: 45 },
+        normal: { label: '職人',   speed: 1.0,  time: 60, bossHP: 40, bossTime: 40, trigger: 60 },
+        hard:   { label: '鬼',     speed: 1.35, time: 55, bossHP: 46, bossTime: 40, trigger: 75 }
     };
     let currentDifficulty = 'normal';
 
@@ -788,6 +853,29 @@
     let shakeTime = 0;
     let achimiTalkTimer = 2;
 
+    // Ammo ("餃子の皿"): throws cost a gyoza, the plate refills over time.
+    // This is what stops screen-mashing from being a winning strategy.
+    const AMMO_MAX = 5;
+    const AMMO_REFILL = 1.7; // gyoza per second
+    let ammo = AMMO_MAX;
+    let emptyWarnCooldown = 0;
+    let recoil = 0;
+    let missStreak = 0;
+
+    // Presentation state
+    let hitStop = 0;      // frames of freeze on a heavy hit
+    let flash = null;     // { color, life, max }
+    let shockwaves = [];  // expanding rings
+    let steam = [];       // drifting steam puffs behind the action
+
+    function addShockwave(x, y, color, maxR) {
+        shockwaves.push({ x, y, r: 8, maxR: maxR || 70, life: 22, max: 22, color: color || '#FFD54F' });
+    }
+
+    function screenFlash(color, life) {
+        flash = { color, life: life || 10, max: life || 10 };
+    }
+
     // Audio System
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     let soundOn = true;
@@ -844,6 +932,33 @@
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.3);
+                break;
+            case 'empty':
+                oscillator.frequency.setValueAtTime(180, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(90, audioContext.currentTime + 0.1);
+                oscillator.type = 'square';
+                gainNode.gain.setValueAtTime(0.06, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.005, audioContext.currentTime + 0.11);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.11);
+                break;
+            case 'reload':
+                oscillator.frequency.setValueAtTime(700, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(1100, audioContext.currentTime + 0.06);
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.04, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.004, audioContext.currentTime + 0.08);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.08);
+                break;
+            case 'guard':
+                oscillator.frequency.setValueAtTime(320, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(160, audioContext.currentTime + 0.12);
+                oscillator.type = 'square';
+                gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.006, audioContext.currentTime + 0.14);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.14);
                 break;
             case 'jump':
                 oscillator.frequency.setValueAtTime(250, audioContext.currentTime);
@@ -1023,14 +1138,52 @@
         }
     }
 
+    // iOS Safari's 100vh counts the collapsible URL bar, so the bottom of the game
+    // used to hang off-screen. Drive the layout from the real visible viewport instead,
+    // and render the canvas at device pixel ratio for crisp graphics.
+    let safeBottom = 0, safeTop = 0;
+    function readSafeInsets() {
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;' +
+            'padding-bottom:env(safe-area-inset-bottom,0px);padding-top:env(safe-area-inset-top,0px);';
+        document.body.appendChild(probe);
+        const cs = getComputedStyle(probe);
+        safeBottom = parseFloat(cs.paddingBottom) || 0;
+        safeTop = parseFloat(cs.paddingTop) || 0;
+        probe.remove();
+    }
+
+    // The game logic is written in CSS pixels, so canvas.width/height are shadowed to
+    // report the logical size while the real backing store runs at device pixel ratio.
+    let cssW = window.innerWidth, cssH = window.innerHeight;
+    Object.defineProperty(canvas, 'width', { configurable: true, get: () => cssW });
+    Object.defineProperty(canvas, 'height', { configurable: true, get: () => cssH });
+
     function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        player.x = canvas.width / 2;
-        player.y = canvas.height - 80;
+        const vv = window.visualViewport;
+        cssW = Math.round(vv ? vv.width : window.innerWidth);
+        cssH = Math.round(vv ? vv.height : window.innerHeight);
+        document.documentElement.style.setProperty('--app-h', cssH + 'px');
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.setAttribute('width', Math.round(cssW * dpr));
+        canvas.setAttribute('height', Math.round(cssH * dpr));
+        canvas.style.width = cssW + 'px';
+        canvas.style.height = cssH + 'px';
+        // Resizing the backing store resets the context, so re-apply the DPR transform.
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        readSafeInsets();
+        player.x = cssW / 2;
+        player.y = cssH - 80 - safeBottom;
         initLanterns();
     }
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', resize);
+        window.visualViewport.addEventListener('scroll', resize);
+    }
 
     // Drifting lanterns for a lively backdrop
     function initLanterns() {
@@ -1047,9 +1200,110 @@
         }
     }
 
-    function drawLanterns() {
+    function initSteam() {
+        steam = [];
+        for (let i = 0; i < 14; i++) {
+            steam.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                r: Math.random() * 60 + 40,
+                sp: Math.random() * 0.4 + 0.2,
+                a: Math.random() * 0.05 + 0.03
+            });
+        }
+    }
+
+    // Gradients are rebuilt only when the size or fever state changes — creating
+    // them every frame is a real cost on phones.
+    let bgCache = { key: '', wall: null, floor: null, glow: null, vignette: null };
+    function bgGradients() {
+        const W = canvas.width, H = canvas.height, horizon = H * 0.62;
+        const key = `${W}x${H}:${effects.fever > 0 ? 1 : 0}`;
+        if (bgCache.key === key) return bgCache;
+
+        const wall = ctx.createLinearGradient(0, 0, 0, horizon);
+        wall.addColorStop(0, effects.fever > 0 ? '#7a1f10' : '#3d1414');
+        wall.addColorStop(1, effects.fever > 0 ? '#c2410c' : '#8b2a1a');
+
+        const floor = ctx.createLinearGradient(0, horizon, 0, H);
+        floor.addColorStop(0, '#7a3b1d');
+        floor.addColorStop(1, '#4a2210');
+
+        const glow = ctx.createLinearGradient(0, horizon - 60, 0, horizon + 40);
+        glow.addColorStop(0, 'rgba(255,180,80,0)');
+        glow.addColorStop(0.5, 'rgba(255,180,80,0.28)');
+        glow.addColorStop(1, 'rgba(255,140,40,0)');
+
+        const vignette = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35,
+                                                  W / 2, H / 2, Math.max(W, H) * 0.75);
+        vignette.addColorStop(0, 'rgba(0,0,0,0)');
+        vignette.addColorStop(1, 'rgba(0,0,0,0.45)');
+
+        bgCache = { key, wall, floor, glow, vignette };
+        return bgCache;
+    }
+
+    // Restaurant backdrop: warm gradient, wooden floor, glowing lanterns and steam.
+    function drawSceneBackground(ts) {
+        const W = canvas.width, H = canvas.height;
+        const horizon = H * 0.62;
+        const g = bgGradients();
+
+        ctx.fillStyle = g.wall;
+        ctx.fillRect(0, 0, W, horizon);
+
+        // Faint paper-screen lattice on the back wall
         ctx.save();
-        ctx.globalAlpha = 0.22;
+        ctx.globalAlpha = 0.09;
+        ctx.strokeStyle = '#ffe0b2';
+        ctx.lineWidth = 2;
+        for (let x = 0; x < W; x += 56) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, horizon); ctx.stroke();
+        }
+        for (let y = 0; y < horizon; y += 56) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+        }
+        ctx.restore();
+
+        // Wooden floor with perspective boards
+        ctx.fillStyle = g.floor;
+        ctx.fillRect(0, horizon, W, H - horizon);
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.strokeStyle = '#2c1408';
+        ctx.lineWidth = 2;
+        for (let i = -6; i <= 6; i++) {
+            ctx.beginPath();
+            ctx.moveTo(W / 2 + i * 40, horizon);
+            ctx.lineTo(W / 2 + i * 190, H);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // Warm glow along the horizon (the kitchen pass)
+        ctx.fillStyle = g.glow;
+        ctx.fillRect(0, horizon - 60, W, 100);
+
+        // Steam puffs drifting upward
+        ctx.save();
+        for (const s of steam) {
+            s.y -= s.sp;
+            if (s.y < -s.r) { s.y = H + s.r; s.x = Math.random() * W; }
+            const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
+            g.addColorStop(0, `rgba(255,255,255,${s.a})`);
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+
+        drawLanterns(ts);
+    }
+
+    function drawLanterns(ts) {
+        ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         for (const l of lanterns) {
@@ -1059,10 +1313,56 @@
                 l.y = -40;
                 l.x = Math.random() * canvas.width;
             }
+            const lx = l.x + Math.sin(l.sway) * 15;
+            // Halo of light around each lantern
+            const g = ctx.createRadialGradient(lx, l.y, 0, lx, l.y, l.size * 1.8);
+            g.addColorStop(0, 'rgba(255,150,60,0.30)');
+            g.addColorStop(1, 'rgba(255,120,40,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(lx, l.y, l.size * 1.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.globalAlpha = 0.75;
             ctx.font = `${l.size}px serif`;
-            ctx.fillText('🏮', l.x + Math.sin(l.sway) * 15, l.y);
+            ctx.fillText('🏮', lx, l.y);
+            ctx.globalAlpha = 1;
         }
         ctx.restore();
+    }
+
+    // Expanding impact rings
+    function drawShockwaves() {
+        for (let i = shockwaves.length - 1; i >= 0; i--) {
+            const s = shockwaves[i];
+            const t = 1 - s.life / s.max;
+            s.r = 8 + (s.maxR - 8) * t;
+            s.life--;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, s.life / s.max) * 0.85;
+            ctx.strokeStyle = s.color;
+            ctx.lineWidth = 5 * (1 - t) + 1;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+            if (s.life <= 0) shockwaves.splice(i, 1);
+        }
+    }
+
+    function drawFlashAndVignette() {
+        const W = canvas.width, H = canvas.height;
+        if (flash) {
+            ctx.save();
+            ctx.globalAlpha = (flash.life / flash.max) * 0.5;
+            ctx.fillStyle = flash.color;
+            ctx.fillRect(0, 0, W, H);
+            ctx.restore();
+            flash.life--;
+            if (flash.life <= 0) flash = null;
+        }
+        ctx.fillStyle = bgGradients().vignette;
+        ctx.fillRect(0, 0, W, H);
     }
 
     resize();
@@ -1113,6 +1413,17 @@
     });
 
     function throwGyoza(targetX, targetY) {
+        // The plate is the whole point: you can't mash your way through, you have to aim.
+        if (ammo < 1) {
+            if (emptyWarnCooldown <= 0) {
+                emptyWarnCooldown = 0.35;
+                playSound('empty');
+                spawnScorePopup(player.x, player.y - 90, '皿が空！ 少し待て', '#B71C1C');
+            }
+            return;
+        }
+        ammo -= 1;
+
         const angle = Math.atan2(targetY - player.y, targetX - player.x);
         const speed = 15;
         const giant = effects.giant > 0;
@@ -1127,12 +1438,15 @@
                 rotation: 0,
                 size: giant ? 64 : 30,
                 radius: giant ? 30 : 0,
+                spin: (Math.random() - 0.5) * 0.2 + 0.22,
+                trail: [],
                 active: true
             });
         }
 
         throwsCount++;
         playSound('throw');
+        recoil = 6;
     }
 
     function spawnScorePopup(x, y, text, color) {
@@ -1302,27 +1616,45 @@
                 ctx.globalAlpha = 1.0;
             } else {
                 ctx.save();
+                // Ground shadow gives everything weight
+                ctx.globalAlpha = 0.25;
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y + this.size * 0.5, this.size * 0.34, this.size * 0.11, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
                 ctx.translate(this.x, this.y);
-                // Golden staff gets a shiny aura
+                // Golden staff gets a shiny pulsing aura
                 if (this.kind === 'golden') {
-                    ctx.globalAlpha = 0.4;
-                    ctx.fillStyle = '#FFD700';
+                    const pulse = 1 + Math.sin(Date.now() * 0.008) * 0.12;
+                    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size * 0.95 * pulse);
+                    g.addColorStop(0, 'rgba(255,215,0,0.55)');
+                    g.addColorStop(1, 'rgba(255,215,0,0)');
+                    ctx.fillStyle = g;
                     ctx.beginPath();
-                    ctx.arc(0, 0, this.size * 0.75, 0, Math.PI * 2);
+                    ctx.arc(0, 0, this.size * 0.95 * pulse, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.globalAlpha = 1;
                 }
-                // Angry customers flash a warning ring: don't hit them!
-                if (this.kind === 'customer') {
-                    ctx.globalAlpha = 0.3;
-                    ctx.strokeStyle = '#FF0000';
-                    ctx.lineWidth = 4;
+                // Targets you must NOT hit are loudly telegraphed
+                if (this.points < 0) {
+                    const pulse = 0.5 + Math.sin(Date.now() * 0.01) * 0.25;
+                    ctx.globalAlpha = pulse;
+                    ctx.strokeStyle = '#FF1744';
+                    ctx.lineWidth = 5;
+                    ctx.setLineDash([9, 7]);
                     ctx.beginPath();
-                    ctx.arc(0, 0, this.size * 0.75, 0, Math.PI * 2);
+                    ctx.arc(0, 0, this.size * 0.62, 0, Math.PI * 2);
                     ctx.stroke();
+                    ctx.setLineDash([]);
                     ctx.globalAlpha = 1;
+                    ctx.font = `${Math.round(this.size * 0.42)}px serif`;
+                    ctx.fillText('⛔', 0, -this.size * 0.72);
+                    ctx.font = `${this.size}px serif`;
                 }
                 // Flip sprite based on direction
+                ctx.shadowColor = 'rgba(0,0,0,0.55)';
+                ctx.shadowBlur = 10;
                 if (this.vx < 0) ctx.scale(-1, 1);
                 ctx.fillText(this.emoji, 0, 0);
                 ctx.restore();
@@ -1371,6 +1703,10 @@
             this.attackInterval = 200; // Attack every 3.3 seconds (at 60fps)
             this.chargeScale = 1;
             this.enraged = false;
+            // Guard phase: gyoza bounce off, so you must watch and time your throws
+            this.guard = false;
+            this.guardTimer = 260 + Math.random() * 120;
+            this.aura = 0;
         }
 
         update() {
@@ -1389,6 +1725,20 @@
             }
 
             if (this.hitFlash > 0) this.hitFlash--;
+            this.aura += 0.05;
+
+            // Guard cycle: shielded for ~2s, then open again
+            this.guardTimer--;
+            if (this.guardTimer <= 0) {
+                this.guard = !this.guard;
+                this.guardTimer = this.guard
+                    ? (this.enraged ? 150 : 110)
+                    : (this.enraged ? 200 : 280) + Math.random() * 90;
+                if (this.guard) {
+                    spawnScorePopup(this.x, this.y - this.size * 0.7, '🛡 ガード中！', '#42A5F5');
+                    playSound('guard');
+                }
+            }
 
             // Attack timer
             this.attackTimer++;
@@ -1409,6 +1759,9 @@
         enrage() {
             this.enraged = true;
             this.attackInterval = 130; // Attacks come faster
+            screenFlash('#FF1744', 20);
+            addShockwave(this.x, this.y, '#FF1744', 320);
+            hitStop = 8;
             const phrase = BOSS_ENRAGE_PHRASES[Math.floor(Math.random() * BOSS_ENRAGE_PHRASES.length)];
             spawnScorePopup(this.x, this.y - this.size / 2 - 40, phrase, '#FF1744');
             playSound('warning');
@@ -1435,14 +1788,33 @@
             const barWidth = Math.min(canvas.width * 0.6, 300);
             const barHeight = Math.min(canvas.height * 0.03, 20);
             const barX = canvas.width / 2 - barWidth / 2;
-            const barY = Math.min(canvas.height * 0.08, 50);
+            const barY = safeTop + Math.min(canvas.height * 0.06, 44);
 
-            ctx.fillStyle = '#333';
-            ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
-            ctx.fillStyle = '#FF0000';
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(barX - 3, barY - 3, barWidth + 6, barHeight + 6);
+            ctx.restore();
+            ctx.fillStyle = '#4a0000';
             ctx.fillRect(barX, barY, barWidth, barHeight);
-            ctx.fillStyle = this.enraged ? '#FF9100' : '#00FF00';
+            const hpGrad = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+            if (this.enraged) {
+                hpGrad.addColorStop(0, '#FFD180'); hpGrad.addColorStop(1, '#FF6D00');
+            } else {
+                hpGrad.addColorStop(0, '#B9F6CA'); hpGrad.addColorStop(1, '#00C853');
+            }
+            ctx.fillStyle = hpGrad;
             ctx.fillRect(barX, barY, barWidth * (this.hp / this.maxHP), barHeight);
+            // Gloss + segment ticks
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.fillRect(barX, barY, barWidth * (this.hp / this.maxHP), barHeight * 0.4);
+            ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+            ctx.lineWidth = 1;
+            for (let seg = 1; seg < 10; seg++) {
+                const sx = barX + barWidth * seg / 10;
+                ctx.beginPath(); ctx.moveTo(sx, barY); ctx.lineTo(sx, barY + barHeight); ctx.stroke();
+            }
 
             // Draw boss (emoji midboss or unknown.png) with charge effect
             if (this.emoji || bossImage.complete) {
@@ -1450,15 +1822,20 @@
                 ctx.translate(this.x, this.y);
                 ctx.scale(this.chargeScale, this.chargeScale);
 
-                // Enraged boss trembles with a red aura
+                // Layered aura rings make the boss feel dangerous
+                const auraColor = this.enraged ? '255,23,68' : '156,39,176';
+                for (let ring = 0; ring < 3; ring++) {
+                    const rr = this.size * (0.62 + ring * 0.14) + Math.sin(this.aura + ring) * 6;
+                    const g = ctx.createRadialGradient(0, 0, rr * 0.6, 0, 0, rr);
+                    g.addColorStop(0, `rgba(${auraColor},0)`);
+                    g.addColorStop(1, `rgba(${auraColor},${0.22 - ring * 0.06})`);
+                    ctx.fillStyle = g;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, rr, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 if (this.enraged) {
                     ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
-                    ctx.globalAlpha = 0.3;
-                    ctx.fillStyle = '#FF1744';
-                    ctx.beginPath();
-                    ctx.arc(0, 0, this.size * 0.7, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.globalAlpha = 1;
                 }
 
                 // Flash red during charge
@@ -1479,11 +1856,37 @@
                     ctx.drawImage(bossImage, -this.size/2, -this.size/2, this.size, this.size);
                 }
                 ctx.restore();
+
+                // Guard bubble
+                if (this.guard) {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    const r = this.size * 0.72;
+                    const g = ctx.createRadialGradient(0, 0, r * 0.75, 0, 0, r);
+                    g.addColorStop(0, 'rgba(66,165,245,0.05)');
+                    g.addColorStop(1, 'rgba(66,165,245,0.45)');
+                    ctx.fillStyle = g;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(144,202,249,0.9)';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([10, 6]);
+                    ctx.lineDashOffset = -this.aura * 12;
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.font = `${Math.round(this.size * 0.3)}px serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText('🛡', 0, -r - 14);
+                    ctx.restore();
+                }
             }
         }
 
-        hit() {
-            this.hp--;
+        hit(dmg) {
+            this.hp -= (dmg || 1);
             this.hitFlash = 5;
 
             // Low HP: the boss loses its temper
@@ -1529,6 +1932,10 @@
         document.getElementById('diffEasy').classList.toggle('selected', name === 'easy');
         document.getElementById('diffNormal').classList.toggle('selected', name === 'normal');
         document.getElementById('diffHard').classList.toggle('selected', name === 'hard');
+    }
+
+    function toggleLegend() {
+        document.getElementById('legendBox').classList.toggle('hidden');
     }
 
     function toggleStory(show) {
@@ -1637,6 +2044,14 @@
         powerupSpawnTimer = 5;
         shakeTime = 0;
         achimiTalkTimer = 2;
+        ammo = AMMO_MAX;
+        emptyWarnCooldown = 0;
+        recoil = 0;
+        missStreak = 0;
+        hitStop = 0;
+        flash = null;
+        shockwaves = [];
+        initSteam();
 
         // Create initial targets
         for(let i=0; i<3; i++) targets.push(new Target());
@@ -1722,10 +2137,18 @@
         return { title: "銀河餃子大帝", desc: "宇宙の餃子はすべてあなたのもの。" };
     }
 
+    function ammoBar() {
+        const full = Math.floor(ammo);
+        return '🥟'.repeat(full) + '·'.repeat(Math.max(0, AMMO_MAX - full));
+    }
+
     function updateHUD() {
         document.getElementById('score').innerText = score;
         document.getElementById('timer').innerText = Math.ceil(timeLeft);
         document.getElementById('comboDisp').innerText = combo;
+        const bar = ammoBar();
+        document.getElementById('ammoDisp').innerText = bar;
+        document.getElementById('ammoDispBoss').innerText = bar;
         if (boss) {
             document.getElementById('bossHP').innerText = boss.hp;
             document.getElementById('bossMaxHP').innerText = boss.maxHP;
@@ -1877,6 +2300,9 @@
             combo = 0;
             comboTimer = 0;
             shakeTime = 15;
+            hitStop = 4;
+            screenFlash('#b71c1c', 10);
+            addShockwave(t.x, t.y, '#FF1744', 110);
             playSound('bad');
             spawnScorePopup(t.x, t.y, `${t.points}皿… ${t.penaltyText || 'お客様!!'}`, '#B71C1C');
             if (Math.random() < 0.7) spawnScorePopup(t.x, t.y - t.size - 25, '「悪質」', '#6A1B9A');
@@ -1886,6 +2312,9 @@
             comboTimer = COMBO_KEEP_TIME;
             if (combo > maxCombo) maxCombo = combo;
             hitsCount++;
+            missStreak = 0;
+            addShockwave(t.x, t.y, combo >= 8 ? '#FF8F00' : '#FFD54F', 60 + Math.min(60, combo * 4));
+            if (combo > 0 && combo % 10 === 0) { hitStop = 3; screenFlash('#FFD700', 8); }
 
             const gained = t.points * comboMultiplier();
             score += gained;
@@ -1916,7 +2345,16 @@
     function gameLoop(timestamp) {
         if (gameState !== 'PLAYING' && gameState !== 'WARNING' && gameState !== 'BOSS_BATTLE') return;
 
-        const deltaTime = (timestamp - lastTime) / 1000;
+        // Hit-stop: freeze a few frames on heavy impacts for punch
+        if (hitStop > 0) {
+            hitStop--;
+            lastTime = timestamp;
+            requestAnimationFrame(gameLoop);
+            return;
+        }
+
+        // Cap delta so a backgrounded tab doesn't teleport the game state
+        const deltaTime = Math.min(0.05, (timestamp - lastTime) / 1000);
         lastTime = timestamp;
 
         // Check if we need to trigger a boss battle (final boss in kentei, midboss in akunin).
@@ -1970,6 +2408,15 @@
             if (effects[key] > 0) effects[key] = Math.max(0, effects[key] - deltaTime);
         }
 
+        // Refill the plate (faster during fever so the payoff feels big)
+        if (ammo < AMMO_MAX) {
+            const before = Math.floor(ammo);
+            ammo = Math.min(AMMO_MAX, ammo + AMMO_REFILL * deltaTime * (effects.fever > 0 ? 1.6 : 1));
+            if (Math.floor(ammo) > before && Math.floor(ammo) === AMMO_MAX) playSound('reload');
+        }
+        if (emptyWarnCooldown > 0) emptyWarnCooldown -= deltaTime;
+        if (recoil > 0) recoil = Math.max(0, recoil - deltaTime * 40);
+
         // Combo decay
         if (comboTimer > 0) {
             comboTimer -= deltaTime;
@@ -2014,6 +2461,9 @@
                         playerHP--;
                         playSound('explosion');
                         shakeTime = 30;
+                        hitStop = 6;
+                        screenFlash('#ff1744', 14);
+                        addShockwave(player.x, player.y - 30, '#FF1744', 180);
 
                         // Screen shake effect
                         for(let i=0; i<20; i++) {
@@ -2099,8 +2549,8 @@
             ctx.translate((Math.random() - 0.5) * intensity, (Math.random() - 0.5) * intensity);
         }
 
-        // Backdrop: drifting lanterns
-        drawLanterns();
+        // Backdrop: restaurant interior, steam and glowing lanterns
+        drawSceneBackground(timestamp);
 
         // Fever mode: golden glow over everything
         if (effects.fever > 0) {
@@ -2119,8 +2569,31 @@
             ctx.lineWidth = 4;
             ctx.globalAlpha = 0.85;
             const feverText = `⭐ FEVER ${Math.ceil(effects.fever)} ⭐`;
-            ctx.strokeText(feverText, canvas.width / 2, feverFont * 2.2);
-            ctx.fillText(feverText, canvas.width / 2, feverFont * 2.2);
+            const feverY = safeTop + feverFont * 2.6;
+            ctx.strokeText(feverText, canvas.width / 2, feverY);
+            ctx.fillText(feverText, canvas.width / 2, feverY);
+            ctx.restore();
+        }
+
+        // Combo gauge, tucked under the HUD: fills with the streak, drains as it times out
+        if (combo > 1) {
+            const gw = Math.min(canvas.width * 0.55, 260);
+            const gx = canvas.width / 2 - gw / 2;
+            const gy = safeTop + (gameState === 'BOSS_BATTLE' ? 86 : 44);
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(gx - 2, gy - 2, gw + 4, 14);
+            const cg = ctx.createLinearGradient(gx, 0, gx + gw, 0);
+            cg.addColorStop(0, '#FFD54F');
+            cg.addColorStop(1, combo >= FEVER_COMBO ? '#FF3D00' : '#FF8F00');
+            ctx.fillStyle = cg;
+            ctx.fillRect(gx, gy, gw * Math.max(0, comboTimer / COMBO_KEEP_TIME), 10);
+            ctx.font = 'bold 15px serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#fff';
+            ctx.shadowColor = '#000';
+            ctx.shadowBlur = 6;
+            ctx.fillText(`${combo} コンボ ×${comboMultiplier()}`, canvas.width / 2, gy + 26);
             ctx.restore();
         }
 
@@ -2136,38 +2609,78 @@
             ctx.restore();
         }
 
-        // Draw Player
-        ctx.font = "60px serif";
+        // Draw Player with a table, shadow and throw recoil
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(player.x, player.y + 6, 42, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
-        ctx.fillText(PLAYER_EMOJI, player.x, player.y);
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 12;
+        ctx.font = "60px serif";
+        ctx.fillText(PLAYER_EMOJI, player.x, player.y - recoil * 0.5);
+        ctx.restore();
+
+        // The plate of gyoza in front of the player
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '24px serif';
+        ctx.globalAlpha = 0.9;
+        for (let a = 0; a < Math.floor(ammo); a++) {
+            ctx.fillText('🥟', player.x - 26 + a * 13, player.y + 14);
+        }
+        ctx.restore();
 
         // Update & Draw Projectiles
         for (let i = projectiles.length - 1; i >= 0; i--) {
             let p = projectiles[i];
             p.x += p.vx;
             p.y += p.vy;
-            p.rotation += 0.2;
+            p.rotation += (p.spin || 0.2);
 
-            // Draw Gyoza (with a little motion trail)
+            // Motion trail
+            if (!p.trail) p.trail = [];
+            p.trail.push({ x: p.x, y: p.y });
+            if (p.trail.length > 6) p.trail.shift();
             ctx.save();
-            ctx.globalAlpha = 0.3;
-            ctx.font = `${Math.round(p.size * 0.7)}px serif`;
-            ctx.textBaseline = "middle";
-            ctx.fillText(GYOZA_EMOJI, p.x - p.vx * 0.8, p.y - p.vy * 0.8);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (let k = 0; k < p.trail.length; k++) {
+                const t = p.trail[k];
+                ctx.globalAlpha = (k / p.trail.length) * 0.35;
+                ctx.font = `${Math.round(p.size * (0.5 + 0.4 * k / p.trail.length))}px serif`;
+                ctx.fillText(GYOZA_EMOJI, t.x, t.y);
+            }
             ctx.restore();
 
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rotation);
+            ctx.shadowColor = 'rgba(255,200,80,0.8)';
+            ctx.shadowBlur = p.radius > 0 ? 22 : 10;
             ctx.font = `${p.size}px serif`;
+            ctx.textAlign = 'center';
             ctx.textBaseline = "middle";
             ctx.fillText(GYOZA_EMOJI, 0, 0);
             ctx.restore();
 
-            // Remove if out of bounds
+            // Remove if out of bounds (a wasted gyoza — aim matters now)
             if (p.x < -50 || p.x > canvas.width + 50 || p.y < -50 || p.y > canvas.height + 50) {
                 projectiles.splice(i, 1);
+                missStreak++;
+                if (missStreak >= 4 && combo > 0) {
+                    combo = 0;
+                    comboTimer = 0;
+                    missStreak = 0;
+                    spawnScorePopup(player.x, player.y - 120, '外しすぎ！コンボ消滅', '#78909C');
+                }
                 continue;
             }
 
@@ -2195,9 +2708,23 @@
                 const dist = Math.sqrt(dx*dx + dy*dy);
 
                 if (dist < boss.size / 2 + p.radius) {
-                    const defeated = boss.hit();
+                    // Guarded: the gyoza bounces off and does nothing
+                    if (boss.guard) {
+                        projectiles.splice(i, 1);
+                        playSound('guard');
+                        addShockwave(p.x, p.y, '#42A5F5', 50);
+                        spawnScorePopup(p.x, p.y, 'ガードされた！', '#42A5F5');
+                        missStreak++;
+                        continue;
+                    }
+                    // Giant gyoza land heavier hits — power-ups actually matter
+                    const dmg = p.radius > 0 ? 3 : 1;
+                    const defeated = boss.hit(dmg);
                     projectiles.splice(i, 1);
+                    missStreak = 0;
                     playSound('bossHit');
+                    addShockwave(boss.x, boss.y, '#FF8F00', dmg > 1 ? 170 : 120);
+                    if (dmg > 1) { hitStop = 3; screenFlash('#ffffff', 6); }
 
                     // Boss hits are worth bonus plates
                     const gained = 2 * (effects.fever > 0 ? 2 : 1);
@@ -2231,7 +2758,10 @@
                         const dy = p.y - t.y;
                         const dist = Math.sqrt(dx*dx + dy*dy);
 
-                        if (dist < t.size * 0.8 + p.radius) { // Hit! (big targets = big hitbox)
+                        // Targets you want to hit are generous; the ones you must avoid
+                        // have a tight hitbox so a near-miss isn't punished.
+                        const reach = t.points < 0 ? t.size * 0.42 : t.size * 0.85;
+                        if (dist < reach + p.radius) {
                             handleTargetHit(t, i);
                             break; // One gyoza hits one target
                         }
@@ -2340,7 +2870,13 @@
             }
         }
 
+        // Impact rings sit above the action
+        drawShockwaves();
+
         ctx.restore(); // end screen shake
+
+        // Full-screen flash + vignette are drawn unshaken
+        drawFlashAndVignette();
 
         requestAnimationFrame(gameLoop);
     }
@@ -2442,6 +2978,9 @@
         projectiles = [];
         powerups = [];
         shakeTime = 0;
+        hitStop = 0;
+        flash = null;
+        shockwaves = [];
         hideAllScreens();
         document.getElementById('stageHud').classList.remove('hidden');
         if (mode === 'mario') stage = buildMario();
@@ -2455,9 +2994,22 @@
 
     function stageLoop(ts) {
         if (gameState !== 'STAGE' || !stage) return;
+        if (hitStop > 0) {
+            hitStop--;
+            lastTime = ts;
+            gameLoopId = requestAnimationFrame(stageLoop);
+            return;
+        }
         lastTime = ts;
         stage.update();
         if (gameState !== 'STAGE') return; // the stage may have just ended
+
+        ctx.save();
+        if (shakeTime > 0) {
+            shakeTime--;
+            const intensity = Math.min(10, shakeTime);
+            ctx.translate((Math.random() - 0.5) * intensity, (Math.random() - 0.5) * intensity);
+        }
         stage.draw(ts);
 
         // Particles & popups on top
@@ -2467,7 +3019,11 @@
             p.draw();
             if (p.life <= 0) particles.splice(i, 1);
         }
+        drawShockwaves();
         updateScorePopups();
+        ctx.restore();
+
+        drawFlashAndVignette();
         document.getElementById('stageHudText').innerText = stage.hudText();
 
         gameLoopId = requestAnimationFrame(stageLoop);
@@ -2540,7 +3096,8 @@
         while (x < L - 500) {
             const r = Math.random();
             if (r < 0.26) {
-                const w = 90 + Math.random() * 70;
+                // A single jump covers ~150px, so cap gaps below that
+                const w = 80 + Math.random() * 55;
                 s.gaps.push({ x, w });
                 x += w + 200;
             } else if (r < 0.52) {
@@ -2578,7 +3135,7 @@
             `${Math.min(100, Math.round(s.camX / (s.length - 400) * 100))}%`;
 
         s.update = () => {
-            const gY = canvas.height - 110;
+            const gY = canvas.height - 110 - safeBottom;
             if (s.py === null) s.py = gY;
             s.camX += s.speed;
             const wx = s.camX + 130;
@@ -2637,6 +3194,8 @@
                         spawnScorePopup(130, s.py - 40, '踏んづけた！ +3皿', '#2E7D32');
                         spawnScorePopup(130, s.py - 80, '「che」', '#6A1B9A');
                         stageBurst(130, s.py, '💫', 4);
+                        addShockwave(130, s.py, '#B9F6CA', 90);
+                        hitStop = 3;
                     } else if (s.inv <= 0) {
                         s.hearts--; s.inv = 100; s.vy = -9;
                         playSound('bad');
@@ -2744,9 +3303,9 @@
 
             // Progress bar
             ctx.fillStyle = 'rgba(0,0,0,0.25)';
-            ctx.fillRect(W * 0.2, 14, W * 0.6, 8);
+            ctx.fillRect(W * 0.2, safeTop + 34, W * 0.6, 8);
             ctx.fillStyle = '#FBC02D';
-            ctx.fillRect(W * 0.2, 14, W * 0.6 * Math.min(1, s.camX / (s.length - 400)), 8);
+            ctx.fillRect(W * 0.2, safeTop + 34, W * 0.6 * Math.min(1, s.camX / (s.length - 400)), 8);
         };
         return s;
     }
@@ -2757,12 +3316,15 @@
         const L = campaign ? 6000 : 9000;
         const s = {
             mode: 'sonic', camX: 0, speed: 8 * diff.speed, baseMax: 17 * diff.speed, boost: 0,
-            gyoza: 0, inv: 0, airborne: false, vy: 0, py: null, rot: 0, jumps: 0, length: L,
+            // A few gyoza in hand so an early bomb costs you instead of ending the run
+            gyoza: 3, inv: 0, airborne: false, vy: 0, py: null, rot: 0, jumps: 0, length: L,
             items: []
         };
-        let x = 500;
+        let x = 900; // give the player a runway before the first pickup
+        let placed = 0;
         while (x < L - 600) {
-            const r = Math.random();
+            // No bombs in the opening stretch
+            const r = placed++ < 2 ? Math.random() * 0.75 : Math.random();
             if (r < 0.45) {
                 for (let k = 0; k < 6; k++) s.items.push({ x: x + k * 70, type: 'gyoza' });
                 x += 570;
@@ -2779,7 +3341,7 @@
             }
         }
         s.terrain = (x) => {
-            const gY = canvas.height - 90;
+            const gY = canvas.height - 90 - safeBottom;
             const y = gY - (Math.sin(x * 0.0028) * 55 + Math.sin(x * 0.0011) * 75 + 130);
             return Math.min(gY, Math.max(canvas.height * 0.3, y));
         };
@@ -2844,6 +3406,10 @@
                             stageBurst(150, s.py - 20, '🥟', lost);
                             spawnScorePopup(150, s.py - 90, `💥 餃子が${lost}個散らばった！`, '#B71C1C');
                             spawnScorePopup(150, s.py - 130, '「誰の仕業？」', '#6A1B9A');
+                            addShockwave(150, s.py - 25, '#FF1744', 160);
+                            screenFlash('#b71c1c', 12);
+                            shakeTime = 18;
+                            hitStop = 4;
                         } else {
                             stageFail('餃子を一つも持たずに爆弾を踏んでしまった……。\n「che」——音速の旅は、ここで終わった。');
                             return;
@@ -2935,9 +3501,9 @@
 
             // Progress bar
             ctx.fillStyle = 'rgba(255,255,255,0.3)';
-            ctx.fillRect(W * 0.2, 14, W * 0.6, 8);
+            ctx.fillRect(W * 0.2, safeTop + 34, W * 0.6, 8);
             ctx.fillStyle = '#FBC02D';
-            ctx.fillRect(W * 0.2, 14, W * 0.6 * Math.min(1, s.camX / (s.length - 500)), 8);
+            ctx.fillRect(W * 0.2, safeTop + 34, W * 0.6 * Math.min(1, s.camX / (s.length - 500)), 8);
         };
         return s;
     }
@@ -3007,7 +3573,7 @@
                 }
 
                 // Landed in a pocket
-                if (b.y > canvas.height - 90) {
+                if (b.y > canvas.height - 90 - safeBottom) {
                     const zone = Math.min(4, Math.max(0, Math.floor(b.x / canvas.width * 5)));
                     const jackpot = zone === 2;
                     let gain = s.pocketVals[zone];
@@ -3021,7 +3587,10 @@
                         playSound('fever');
                         stageBurst(b.x, canvas.height - 160, '🎉', 10);
                         spawnScorePopup(canvas.width / 2, canvas.height / 2, 'パンパンクロール！！', '#FFD700');
+                        addShockwave(b.x, canvas.height - 130 - safeBottom, '#FFD700', 260);
+                        screenFlash('#FFD700', 16);
                         shakeTime = 20;
+                        hitStop = 5;
                     } else {
                         playSound('hit');
                     }
@@ -3066,13 +3635,13 @@
             for (let z = 0; z < 5; z++) {
                 const jackpot = z === 2;
                 ctx.fillStyle = jackpot ? '#B71C1C' : '#2a0808';
-                ctx.fillRect(z * pw + 3, H - 88, pw - 6, 78);
+                ctx.fillRect(z * pw + 3, H - 88 - safeBottom, pw - 6, 78);
                 ctx.strokeStyle = jackpot ? '#FFD700' : '#8d6e63';
                 ctx.lineWidth = jackpot ? 4 : 2;
-                ctx.strokeRect(z * pw + 3, H - 88, pw - 6, 78);
+                ctx.strokeRect(z * pw + 3, H - 88 - safeBottom, pw - 6, 78);
                 ctx.fillStyle = jackpot ? '#FFD700' : '#FFCCBC';
                 ctx.font = `bold ${jackpot ? 26 : 20}px serif`;
-                ctx.fillText(jackpot ? `🎯${s.pocketVals[z]}` : `${s.pocketVals[z]}`, z * pw + pw / 2, H - 49);
+                ctx.fillText(jackpot ? `🎯${s.pocketVals[z]}` : `${s.pocketVals[z]}`, z * pw + pw / 2, H - 49 - safeBottom);
             }
 
             // Sweeping launcher indicator
@@ -3138,7 +3707,7 @@
         s.update = () => {
             s.t++;
             const W = canvas.width, H = canvas.height;
-            const pyy = H - 130;
+            const pyy = H - 130 - safeBottom;
             s.px += (s.targetX - s.px) * 0.22;
             s.px = Math.max(30, Math.min(W - 30, s.px));
             if (s.inv > 0) s.inv--;
@@ -3191,6 +3760,7 @@
                             score += e.pts;
                             playSound('hit', { combo: s.kills });
                             stageBurst(e.x, e.y, '💥', 3);
+                            addShockwave(e.x, e.y, '#FFD54F', 70);
                             spawnScorePopup(e.x, e.y, `+${e.pts}皿`, '#FFD54F');
                             if (Math.random() < 0.35) {
                                 spawnScorePopup(e.x, e.y - 40, `「${achimiPhrase()}」`, '#CE93D8');
@@ -3246,7 +3816,7 @@
 
         s.draw = () => {
             const W = canvas.width, H = canvas.height;
-            const pyy = H - 130;
+            const pyy = H - 130 - safeBottom;
             ctx.clearRect(0, 0, W, H);
             const grad = ctx.createLinearGradient(0, 0, 0, H);
             grad.addColorStop(0, '#0a0a2e');
@@ -3294,9 +3864,9 @@
 
             // Kill progress bar
             ctx.fillStyle = 'rgba(255,255,255,0.25)';
-            ctx.fillRect(W * 0.2, 14, W * 0.6, 8);
+            ctx.fillRect(W * 0.2, safeTop + 34, W * 0.6, 8);
             ctx.fillStyle = '#FBC02D';
-            ctx.fillRect(W * 0.2, 14, W * 0.6 * Math.min(1, s.kills / s.need), 8);
+            ctx.fillRect(W * 0.2, safeTop + 34, W * 0.6 * Math.min(1, s.kills / s.need), 8);
         };
         return s;
     }
